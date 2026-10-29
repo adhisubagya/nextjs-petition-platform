@@ -131,7 +131,7 @@ See [ADR 0001](docs/adr/0001-demo-mode-and-edge-caching.md) for the reasoning.
 ## Getting started
 
 ```bash
-nvm use            # Node 22
+nvm use            # Node 24
 npm install
 cp .env.example .env.local
 npm run dev        # http://localhost:3000, seed data, Demo Mode
