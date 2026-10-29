@@ -8,6 +8,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 - Theme moved to shadcn/ui neutral design tokens with Geist font; dark theme is the default, with a light/dark toggle.
 - Petition page redesigned: sticky blurred header, gradient hero, progress card, two-column layout with a sticky sign form, and a dark OG image.
+- Admin redesigned on a TailAdmin-style layout: sidebar, sticky header, metric cards, source bars and a comments table; login moved into a card.
 - Runtime moved to Node 24 (engines, `.nvmrc`, CI) to match `@firebase/auth` requirements.
 
 ### Added
