@@ -1,7 +1,9 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { CommentPage } from "@/lib/petition";
 import type { Comment } from "@/lib/types";
 import { CommentCard } from "./CommentCard";
@@ -27,32 +29,27 @@ export function CommentList({ initialPage, prepend = [] }: { initialPage: Commen
 
   return (
     <section aria-labelledby="comments-heading">
-      <h2 id="comments-heading" className="text-lg font-semibold">
+      <h2 id="comments-heading" className="text-lg font-semibold tracking-tight">
         Recent signers
       </h2>
       {isError && <p className="mt-4 text-sm text-destructive">Could not load comments.</p>}
-      <ul className={`mt-4 space-y-3 ${isFetching ? "opacity-60" : ""}`}>
+      <ul className={`mt-4 space-y-3 transition-opacity ${isFetching ? "opacity-60" : ""}`}>
         {[...(page === 0 ? prepend : []), ...(data?.comments ?? [])].map((c) => (
           <CommentCard key={c.id} comment={c} />
         ))}
       </ul>
       <nav className="mt-4 flex justify-between" aria-label="Comment pages">
-        <button
-          type="button"
-          className="rounded border border-border px-3 py-1.5 text-sm disabled:opacity-40"
-          disabled={page === 0}
-          onClick={() => setCursors((c) => c.slice(0, -1))}
-        >
-          Previous page
-        </button>
-        <button
-          type="button"
-          className="rounded border border-border px-3 py-1.5 text-sm disabled:opacity-40"
+        <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setCursors((c) => c.slice(0, -1))}>
+          <ChevronLeft aria-hidden /> Previous page
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           disabled={!data?.nextCursor || isFetching}
           onClick={() => setCursors((c) => [...c, data!.nextCursor])}
         >
-          Next page
-        </button>
+          Next page <ChevronRight aria-hidden />
+        </Button>
       </nav>
     </section>
   );

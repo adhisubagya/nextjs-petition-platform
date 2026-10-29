@@ -2,8 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Turnstile } from "@marsidev/react-turnstile";
+import { ImagePlus, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input, Label, Textarea } from "@/components/ui/input";
 import { DEMO_MODE } from "@/lib/demo";
 import { commentInputSchema, MESSAGE_MAX, NAME_MAX } from "@/lib/schemas";
 import type { Comment } from "@/lib/types";
@@ -12,7 +16,6 @@ const formSchema = commentInputSchema.omit({ avatarUrl: true });
 type FormValues = { name: string; message: string };
 
 const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
-const input = "w-full rounded border border-border px-3 py-2 focus:border-ring bg-transparent focus:outline-none";
 
 export function SignForm({ onSigned }: { onSigned: (comment: Comment) => void }) {
   const [token, setToken] = useState<string | null>(null);
@@ -46,31 +49,42 @@ export function SignForm({ onSigned }: { onSigned: (comment: Comment) => void })
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 rounded-lg border border-border p-4" noValidate>
-      <h2 className="text-lg font-semibold">Sign the petition</h2>
-      <div>
-        <label htmlFor="name" className="text-sm font-medium">Name</label>
-        <input id="name" maxLength={NAME_MAX} className={input} aria-invalid={!!errors.name} {...register("name")} />
-        {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name.message}</p>}
-      </div>
-      <div>
-        <label htmlFor="message" className="text-sm font-medium">Comment</label>
-        <textarea id="message" rows={3} maxLength={MESSAGE_MAX} className={input} aria-invalid={!!errors.message} {...register("message")} />
-        {errors.message && <p className="mt-1 text-sm text-destructive">{errors.message.message}</p>}
-      </div>
-      <div>
-        <label htmlFor="avatar" className="text-sm font-medium">Avatar (optional)</label>
-        <input id="avatar" type="file" accept="image/*" className="block text-sm" onChange={(e) => setAvatar(e.target.files?.[0] ?? null)} />
-      </div>
-      <Turnstile siteKey={siteKey} onSuccess={setToken} onExpire={() => setToken(null)} options={{ size: "flexible" }} />
-      <button
-        type="submit"
-        disabled={isSubmitting || !token}
-        className="w-full rounded bg-primary px-4 py-2 font-medium text-primary-foreground disabled:opacity-50"
-      >
-        {isSubmitting ? "Signing…" : "Sign Petition"}
-      </button>
-      {status && <p role="status" className="text-sm text-muted-foreground">{status}</p>}
-    </form>
+    <Card className="shadow-lg">
+      <CardHeader>
+        <CardTitle className="text-xl">Sign the petition</CardTitle>
+        <CardDescription>Add your name and a short message of support.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" maxLength={NAME_MAX} placeholder="Your name" aria-invalid={!!errors.name} {...register("name")} />
+            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="message">Comment</Label>
+            <Textarea id="message" rows={3} maxLength={MESSAGE_MAX} placeholder="Why are you signing?" aria-invalid={!!errors.message} {...register("message")} />
+            {errors.message && <p className="text-sm text-destructive">{errors.message.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="avatar">Avatar (optional)</Label>
+            <label
+              htmlFor="avatar"
+              className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent/50 has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50"
+            >
+              <ImagePlus className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">{avatar ? avatar.name : "Choose an image"}</span>
+              <input id="avatar" type="file" accept="image/*" className="sr-only" onChange={(e) => setAvatar(e.target.files?.[0] ?? null)} />
+            </label>
+          </div>
+          <Turnstile siteKey={siteKey} onSuccess={setToken} onExpire={() => setToken(null)} options={{ size: "flexible" }} />
+          <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || !token}>
+            {isSubmitting && <Loader2 className="animate-spin" aria-hidden />}
+            {isSubmitting ? "Signing…" : "Sign Petition"}
+          </Button>
+          {status && <p role="status" className="text-center text-sm text-muted-foreground">{status}</p>}
+        </form>
+      </CardContent>
+    </Card>
   );
 }
