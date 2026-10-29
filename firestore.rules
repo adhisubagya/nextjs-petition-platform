@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public reads; all writes go through the server (Admin SDK) after validation and rate limiting.
+    match /petitions/{petitionId} {
+      allow read: if true;
+      allow write: if false;
+      match /comments/{commentId} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+  }
+}

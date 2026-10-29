@@ -1,0 +1,12 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /avatars/{file} {
+      allow read: if true;
+      // Compressed client-side to ~50KB; reject anything that is not a small image.
+      allow create: if request.resource.size < 200 * 1024
+                    && request.resource.contentType.matches('image/.*');
+      allow update, delete: if false;
+    }
+  }
+}
