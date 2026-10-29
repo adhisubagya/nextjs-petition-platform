@@ -3,6 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import type { CommentPage } from "@/lib/petition";
+import type { Comment } from "@/lib/types";
 import { CommentCard } from "./CommentCard";
 
 async function fetchPage(cursor: string | null): Promise<CommentPage> {
@@ -11,7 +12,7 @@ async function fetchPage(cursor: string | null): Promise<CommentPage> {
   return res.json();
 }
 
-export function CommentList({ initialPage }: { initialPage: CommentPage }) {
+export function CommentList({ initialPage, prepend = [] }: { initialPage: CommentPage; prepend?: Comment[] }) {
   // cursors[i] is the cursor that loads page i; page 0 has none.
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
   const page = cursors.length - 1;
@@ -31,7 +32,9 @@ export function CommentList({ initialPage }: { initialPage: CommentPage }) {
       </h2>
       {isError && <p className="mt-4 text-sm text-red-700">Could not load comments.</p>}
       <ul className={`mt-4 space-y-3 ${isFetching ? "opacity-60" : ""}`}>
-        {data?.comments.map((c) => <CommentCard key={c.id} comment={c} />)}
+        {[...(page === 0 ? prepend : []), ...(data?.comments ?? [])].map((c) => (
+          <CommentCard key={c.id} comment={c} />
+        ))}
       </ul>
       <nav className="mt-4 flex justify-between" aria-label="Comment pages">
         <button
