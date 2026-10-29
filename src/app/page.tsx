@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { CommentList } from "@/components/CommentList";
-import { ProgressBar } from "@/components/ProgressBar";
+import { PetitionBody } from "@/components/PetitionBody";
 import { ShareButtons } from "@/components/ShareButtons";
 import { getComments, getPetition } from "@/lib/petition";
 
@@ -27,9 +26,8 @@ export default async function PetitionPage() {
         <h1 className="text-3xl font-bold tracking-tight">{petition.title}</h1>
         <p className="text-neutral-600">{petition.description}</p>
       </header>
-      <ProgressBar count={petition.signatureCount} goal={petition.goal} />
       <ShareButtons url={siteUrl} text={`Sign: ${petition.title}`} />
-      <CommentList initialPage={firstPage} />
+      <PetitionBody petition={petition} initialPage={firstPage} />
     </main>
   );
 }
