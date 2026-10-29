@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -18,12 +17,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     // next-themes sets the class before paint; the attribute differs from the server HTML by design.
     <html lang="en" className={`dark ${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="min-h-screen font-sans antialiased">
-        <Providers>
-          <div className="fixed top-3 right-3 z-50">
-            <ThemeToggle />
-          </div>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
         <footer className="mx-auto max-w-2xl border-t px-4 py-6 text-center text-sm text-muted-foreground">
           © 2026 DAWN. All rights reserved.
         </footer>

@@ -10,9 +10,21 @@ export default async function OgImage() {
   const { title, signatureCount } = await getPetition();
   return new ImageResponse(
     (
-      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", width: "100%", height: "100%", padding: 80, background: "#fff", color: "#171717" }}>
-        <div style={{ fontSize: 72, fontWeight: 700 }}>{title}</div>
-        <div style={{ fontSize: 40, marginTop: 24, color: "#525252" }}>{`${signatureCount.toLocaleString("en-US")} signatures`}</div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          width: "100%",
+          height: "100%",
+          padding: 80,
+          background: "radial-gradient(80% 80% at 50% 0%, #262626, #0a0a0a)",
+          color: "#fafafa",
+        }}
+      >
+        <div style={{ fontSize: 28, color: "#a3a3a3", letterSpacing: 4, textTransform: "uppercase" }}>Petition</div>
+        <div style={{ fontSize: 76, fontWeight: 700, marginTop: 16, letterSpacing: -2 }}>{title}</div>
+        <div style={{ fontSize: 40, marginTop: 28, color: "#a3a3a3" }}>{`${signatureCount.toLocaleString("en-US")} signatures`}</div>
       </div>
     ),
     size,
