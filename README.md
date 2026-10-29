@@ -40,19 +40,19 @@ The public deployment runs in **Demo Mode**: everything works in the browser, bu
 
 ```mermaid
 flowchart LR
-  B[Browser] -->|HTML, cached 24h| E[Vercel Edge Cache]
-  E -->|miss / revalidate| P[Next.js page<br/>ISR]
-  B -->|GET /api/comments| E
-  B -->|POST /api/comments| R[Route Handler]
-  B -->|avatar upload, live mode| S[(Cloud Storage)]
-  B -->|ID token| AA[/api/admin/*]
-  P --> F[(Firestore)]
-  R --> RL[(Upstash Redis)]
-  R --> T[Turnstile siteverify]
-  R -->|live mode only| F
-  AA --> FA[Firebase Admin Auth]
-  AA --> PH[PostHog API]
-  AA -->|live mode only| F
+  B["Browser"] -->|"HTML, cached 24h"| E["Vercel Edge Cache"]
+  E -->|"miss / revalidate"| P["Next.js page<br/>ISR"]
+  B -->|"GET /api/comments"| E
+  B -->|"POST /api/comments"| R["Route Handler"]
+  B -->|"avatar upload, live mode"| S[("Cloud Storage")]
+  B -->|"ID token"| AA["/api/admin/*"]
+  P --> F[("Firestore")]
+  R --> RL[("Upstash Redis")]
+  R --> T["Turnstile siteverify"]
+  R -->|"live mode only"| F
+  AA --> FA["Firebase Admin Auth"]
+  AA --> PH["PostHog API"]
+  AA -->|"live mode only"| F
 ```
 
 All Firestore reads and writes go through the server with the Firebase Admin SDK. The Firestore rules deny every client write (`firestore.rules`), so validation, rate limiting and bot checks can't be bypassed by calling Firebase directly. The one direct client write is the avatar upload, which `storage.rules` limits to new image files under 200KB in `avatars/`.
