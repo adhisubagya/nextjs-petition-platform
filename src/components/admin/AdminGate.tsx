@@ -9,6 +9,6 @@ import { LoginForm } from "./LoginForm";
 export function AdminGate({ petition }: { petition: Petition }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   useEffect(() => watchSession(setSession), []);
-  if (session === undefined) return <p className="p-8 text-sm text-neutral-500">Loading…</p>;
+  if (session === undefined) return <p className="p-8 text-sm text-muted-foreground">Loading…</p>;
   return session ? <Dashboard session={session} petition={petition} /> : <LoginForm />;
 }

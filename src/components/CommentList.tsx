@@ -30,7 +30,7 @@ export function CommentList({ initialPage, prepend = [] }: { initialPage: Commen
       <h2 id="comments-heading" className="text-lg font-semibold">
         Recent signers
       </h2>
-      {isError && <p className="mt-4 text-sm text-red-700">Could not load comments.</p>}
+      {isError && <p className="mt-4 text-sm text-destructive">Could not load comments.</p>}
       <ul className={`mt-4 space-y-3 ${isFetching ? "opacity-60" : ""}`}>
         {[...(page === 0 ? prepend : []), ...(data?.comments ?? [])].map((c) => (
           <CommentCard key={c.id} comment={c} />
@@ -39,7 +39,7 @@ export function CommentList({ initialPage, prepend = [] }: { initialPage: Commen
       <nav className="mt-4 flex justify-between" aria-label="Comment pages">
         <button
           type="button"
-          className="rounded border border-neutral-300 px-3 py-1.5 text-sm disabled:opacity-40"
+          className="rounded border border-border px-3 py-1.5 text-sm disabled:opacity-40"
           disabled={page === 0}
           onClick={() => setCursors((c) => c.slice(0, -1))}
         >
@@ -47,7 +47,7 @@ export function CommentList({ initialPage, prepend = [] }: { initialPage: Commen
         </button>
         <button
           type="button"
-          className="rounded border border-neutral-300 px-3 py-1.5 text-sm disabled:opacity-40"
+          className="rounded border border-border px-3 py-1.5 text-sm disabled:opacity-40"
           disabled={!data?.nextCursor || isFetching}
           onClick={() => setCursors((c) => [...c, data!.nextCursor])}
         >
