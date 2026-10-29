@@ -24,7 +24,7 @@ export default async function PetitionPage() {
     <main className="mx-auto max-w-2xl space-y-8 px-4 py-12">
       <header className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">{petition.title}</h1>
-        <p className="text-neutral-600">{petition.description}</p>
+        <p className="text-muted-foreground">{petition.description}</p>
       </header>
       <ShareButtons url={siteUrl} text={`Sign: ${petition.title}`} />
       <PetitionBody petition={petition} initialPage={firstPage} />

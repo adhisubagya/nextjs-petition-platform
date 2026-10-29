@@ -44,7 +44,7 @@ export function Dashboard({ session, petition }: { session: Session; petition: P
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-muted-foreground">
             {session.email}
             {DEMO_MODE && " · view-only demo"}
           </p>
@@ -58,9 +58,9 @@ export function Dashboard({ session, petition }: { session: Session; petition: P
         <Stat icon={<BarChart3 className="size-4" />} label="Page views (7d)" value={stats.data?.pageviews} />
         <Stat icon={<Users className="size-4" />} label="Visitors (7d)" value={stats.data?.visitors} />
         <Stat icon={<Users className="size-4" />} label="Signatures" value={petition.signatureCount} />
-        <div className="rounded-lg border border-neutral-200 p-4 sm:col-span-3">
+        <div className="rounded-lg border border-border p-4 sm:col-span-3">
           <h2 className="text-sm font-medium">Top sources{stats.data?.sample && " (sample data)"}</h2>
-          {stats.isError && <p className="text-sm text-red-700">Could not load analytics.</p>}
+          {stats.isError && <p className="text-sm text-destructive">Could not load analytics.</p>}
           <ul className="mt-2 space-y-1 text-sm">
             {stats.data?.referrers.map((r) => (
               <li key={r.source} className="flex justify-between">
@@ -82,11 +82,11 @@ export function Dashboard({ session, petition }: { session: Session; petition: P
             min={1}
             value={goal}
             onChange={(e) => (DEMO_MODE ? toast(DEMO_DISABLED_MESSAGE) : setGoal(Number(e.target.value)))}
-            className="w-40 rounded border border-neutral-300 px-3 py-2"
+            className="w-40 rounded border border-border px-3 py-2"
           />
           <button
             type="button"
-            className="rounded bg-neutral-900 px-4 py-2 text-sm text-white"
+            className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground"
             onClick={() => guarded(() => api("/api/admin/petition", { method: "PATCH", body: JSON.stringify({ goal }) }), "Goal updated")}
           >
             Save
@@ -96,17 +96,17 @@ export function Dashboard({ session, petition }: { session: Session; petition: P
 
       <section className="space-y-2">
         <h2 className="font-semibold">Comments</h2>
-        <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200">
+        <ul className="divide-y divide-border rounded-lg border border-border">
           {comments.data?.comments.map((c) => (
             <li key={c.id} className="flex items-start justify-between gap-3 p-3 text-sm">
               <div className="min-w-0">
                 <span className="font-medium">{c.name}</span>
-                <p className="break-words text-neutral-600">{c.message}</p>
+                <p className="break-words text-muted-foreground">{c.message}</p>
               </div>
               <button
                 type="button"
                 aria-label={c.pinned ? `Unpin comment by ${c.name}` : `Pin comment by ${c.name}`}
-                className="shrink-0 rounded border border-neutral-300 p-1.5"
+                className="shrink-0 rounded border border-border p-1.5"
                 onClick={() =>
                   guarded(
                     () => api(`/api/admin/comments/${c.id}`, { method: "PATCH", body: JSON.stringify({ pinned: !c.pinned }) }),
@@ -126,8 +126,8 @@ export function Dashboard({ session, petition }: { session: Session; petition: P
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value?: number }) {
   return (
-    <div className="rounded-lg border border-neutral-200 p-4">
-      <div className="flex items-center gap-2 text-sm text-neutral-500">
+    <div className="rounded-lg border border-border p-4">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
         {icon} {label}
       </div>
       <p className="mt-1 text-2xl font-bold tabular-nums">{value === undefined ? "…" : value.toLocaleString("en-US")}</p>

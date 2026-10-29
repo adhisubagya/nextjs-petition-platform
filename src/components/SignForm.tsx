@@ -12,7 +12,7 @@ const formSchema = commentInputSchema.omit({ avatarUrl: true });
 type FormValues = { name: string; message: string };
 
 const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
-const input = "w-full rounded border border-neutral-300 px-3 py-2 focus:border-neutral-900 focus:outline-none";
+const input = "w-full rounded border border-border px-3 py-2 focus:border-ring bg-transparent focus:outline-none";
 
 export function SignForm({ onSigned }: { onSigned: (comment: Comment) => void }) {
   const [token, setToken] = useState<string | null>(null);
@@ -46,17 +46,17 @@ export function SignForm({ onSigned }: { onSigned: (comment: Comment) => void })
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 rounded-lg border border-neutral-200 p-4" noValidate>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 rounded-lg border border-border p-4" noValidate>
       <h2 className="text-lg font-semibold">Sign the petition</h2>
       <div>
         <label htmlFor="name" className="text-sm font-medium">Name</label>
         <input id="name" maxLength={NAME_MAX} className={input} aria-invalid={!!errors.name} {...register("name")} />
-        {errors.name && <p className="mt-1 text-sm text-red-700">{errors.name.message}</p>}
+        {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name.message}</p>}
       </div>
       <div>
         <label htmlFor="message" className="text-sm font-medium">Comment</label>
         <textarea id="message" rows={3} maxLength={MESSAGE_MAX} className={input} aria-invalid={!!errors.message} {...register("message")} />
-        {errors.message && <p className="mt-1 text-sm text-red-700">{errors.message.message}</p>}
+        {errors.message && <p className="mt-1 text-sm text-destructive">{errors.message.message}</p>}
       </div>
       <div>
         <label htmlFor="avatar" className="text-sm font-medium">Avatar (optional)</label>
@@ -66,11 +66,11 @@ export function SignForm({ onSigned }: { onSigned: (comment: Comment) => void })
       <button
         type="submit"
         disabled={isSubmitting || !token}
-        className="w-full rounded bg-neutral-900 px-4 py-2 font-medium text-white disabled:opacity-50"
+        className="w-full rounded bg-primary px-4 py-2 font-medium text-primary-foreground disabled:opacity-50"
       >
         {isSubmitting ? "Signing…" : "Sign Petition"}
       </button>
-      {status && <p role="status" className="text-sm text-neutral-700">{status}</p>}
+      {status && <p role="status" className="text-sm text-muted-foreground">{status}</p>}
     </form>
   );
 }
