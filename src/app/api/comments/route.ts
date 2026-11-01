@@ -4,12 +4,24 @@ import { DEMO_MODE } from "@/lib/demo";
 import { adminDb, petitionId } from "@/lib/firebase/admin";
 import { getComments } from "@/lib/petition";
 import { commentRequestSchema } from "@/lib/schemas";
-import { allowComment } from "@/lib/server/ratelimit";
+import { allowComment, allowCommentRead } from "@/lib/server/ratelimit";
 import { verifyTurnstile } from "@/lib/server/turnstile";
 import type { Comment } from "@/lib/types";
 
+// Firestore auto-IDs, or the in-memory seed IDs used without Firebase credentials.
+const CURSOR = /^(?:[A-Za-z0-9]{20}|seed-\d{1,3})$/;
+
+const clientIp = (req: NextRequest) => req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+
 export async function GET(req: NextRequest) {
-  const page = await getComments(req.nextUrl.searchParams.get("cursor"));
+  const cursor = req.nextUrl.searchParams.get("cursor");
+  if (cursor !== null && !CURSOR.test(cursor)) {
+    return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
+  }
+  if (!(await allowCommentRead(clientIp(req)))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+  const page = await getComments(cursor);
   // Cached at the edge for 24h so pagination costs no Firestore reads for most visitors.
   return NextResponse.json(page, {
     headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600" },
@@ -17,7 +29,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const ip = clientIp(req);
   if (!(await allowComment(ip))) {
     return NextResponse.json({ error: "Too many comments. Try again in a minute." }, { status: 429 });
   }
