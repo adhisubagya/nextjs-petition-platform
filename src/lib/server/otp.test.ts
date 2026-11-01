@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { checkCode, issueCode, MAX_ATTEMPTS, memoryStore } from "./otp";
+import { memoryStore } from "./kv";
+import { checkCode, issueCode, MAX_ATTEMPTS } from "./otp";
 
 const email = "signer@example.com";
 
