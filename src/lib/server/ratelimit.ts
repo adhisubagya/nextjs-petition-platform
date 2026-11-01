@@ -14,3 +14,7 @@ function limiter(tokens: number, window: Parameters<typeof Ratelimit.slidingWind
 export const allowComment = limiter(3, "1 m", "rl:comments");
 // Only edge-cache misses reach this, so the cap targets cursor-busting loops, not readers.
 export const allowCommentRead = limiter(30, "1 m", "rl:comments-read");
+// Email-code sign-in: caps inbox flooding per address and code guessing per IP.
+export const allowCodeRequestByIp = limiter(5, "10 m", "rl:code-ip");
+export const allowCodeRequestByEmail = limiter(3, "15 m", "rl:code-email");
+export const allowVerify = limiter(10, "10 m", "rl:verify");
