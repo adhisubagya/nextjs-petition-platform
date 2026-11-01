@@ -4,7 +4,7 @@ import { DEMO_MODE } from "@/lib/demo";
 import { codeRequestSchema } from "@/lib/schemas";
 import { codeEmail, EmailRejectedError, sendEmail } from "@/lib/server/email";
 import { issueCode } from "@/lib/server/otp";
-import { allowCodeRequestByEmail, allowCodeRequestByIp } from "@/lib/server/ratelimit";
+import { allowCodeRequestByEmail, allowCodeRequestByEmailDaily, allowCodeRequestByIp } from "@/lib/server/ratelimit";
 import { verifyTurnstile } from "@/lib/server/turnstile";
 
 export async function POST(req: NextRequest) {
@@ -15,7 +15,11 @@ export async function POST(req: NextRequest) {
   }
   const { email, turnstileToken } = parsed.data;
   const emailKey = createHash("sha256").update(email).digest("hex");
-  if (!(await allowCodeRequestByIp(ip)) || !(await allowCodeRequestByEmail(emailKey))) {
+  if (
+    !(await allowCodeRequestByIp(ip)) ||
+    !(await allowCodeRequestByEmail(emailKey)) ||
+    !(await allowCodeRequestByEmailDaily(emailKey))
+  ) {
     return NextResponse.json({ error: "Too many codes requested. Try again later." }, { status: 429 });
   }
   if (!(await verifyTurnstile(turnstileToken, ip))) {
