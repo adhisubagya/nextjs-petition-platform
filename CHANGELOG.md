@@ -18,4 +18,5 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Email + 6-digit code sign-in before signing (ADR 0003). In Demo Mode no email is sent and the code is shown on screen.
 - Site-wide copyright footer ("© 2026 DAWN. All rights reserved.").

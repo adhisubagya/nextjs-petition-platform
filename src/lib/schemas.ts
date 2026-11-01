@@ -19,3 +19,12 @@ export const commentRequestSchema = commentInputSchema.extend({
 
 export type CommentInput = z.infer<typeof commentInputSchema>;
 export type CommentRequest = z.infer<typeof commentRequestSchema>;
+
+export const emailSchema = z.string().trim().toLowerCase().max(254).pipe(z.email("Enter a valid email"));
+export const codeSchema = z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code");
+
+export const codeRequestSchema = z.object({
+  email: emailSchema,
+  turnstileToken: z.string().min(1, "Verification required"),
+});
+export const verifyRequestSchema = z.object({ email: emailSchema, code: codeSchema });

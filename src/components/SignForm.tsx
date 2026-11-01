@@ -10,12 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { DEMO_MODE } from "@/lib/demo";
 import { commentInputSchema, MESSAGE_MAX, NAME_MAX } from "@/lib/schemas";
+import { siteKey } from "@/lib/turnstile";
 import type { Comment } from "@/lib/types";
 
 const formSchema = commentInputSchema.omit({ avatarUrl: true });
 type FormValues = { name: string; message: string };
 
-const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
 
 export function SignForm({ onSigned }: { onSigned: (comment: Comment) => void }) {
   const [token, setToken] = useState<string | null>(null);
