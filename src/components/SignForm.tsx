@@ -2,11 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Turnstile } from "@marsidev/react-turnstile";
-import { ImagePlus, Loader2 } from "lucide-react";
+import { ImagePlus } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
+import { HoldToSign } from "@/components/HoldToSign";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { DEMO_MODE } from "@/lib/demo";
@@ -65,7 +65,8 @@ export function SignForm({ email, onSigned, onSignOut }: Props) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        {/* Only the hold button signs; Enter in a field must not submit around it. */}
+        <form onSubmit={(e) => e.preventDefault()} className="space-y-4" noValidate>
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" className="mt-0.5 size-4 accent-primary" {...register("anonymous")} />
             <span>
@@ -102,10 +103,7 @@ export function SignForm({ email, onSigned, onSignOut }: Props) {
             </label>
           </div>
           <Turnstile siteKey={siteKey} onSuccess={setToken} onExpire={() => setToken(null)} options={{ size: "flexible" }} />
-          <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || !token}>
-            {isSubmitting && <Loader2 className="animate-spin" aria-hidden />}
-            {isSubmitting ? "Signing…" : "Sign Petition"}
-          </Button>
+          <HoldToSign onComplete={handleSubmit(onSubmit)} disabled={!token} busy={isSubmitting} />
           {status && <p role="status" className="text-center text-sm text-muted-foreground">{status}</p>}
         </form>
       </CardContent>
