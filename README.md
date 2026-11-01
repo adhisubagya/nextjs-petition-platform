@@ -68,7 +68,7 @@ Comments are ordered `pinned DESC, createdAt DESC` (composite index in `firestor
 
 ### Signing a petition
 
-Visitors sign in with their email and a 6-digit code first (`/api/auth/code`, `/api/auth/verify`; see [ADR 0003](docs/adr/0003-email-code-sign-in.md)). Codes are stored only as an HMAC for 10 minutes, allow 5 attempts and work once. "Send as Anonymous" is checked by default and replaces the name with "Anonymous" on the server. Once signed, the form becomes a share card (OS share sheet, WhatsApp, X, copy link for Discord).
+Visitors sign in with their email and a 6-digit code first (`/api/auth/code`, `/api/auth/verify`; see [ADR 0003](docs/adr/0003-email-code-sign-in.md)). Codes are stored only as an HMAC for 10 minutes, allow 5 attempts and work once. "Send as Anonymous" is checked by default and replaces the name with "Anonymous" on the server. Signing is press-and-hold: the "Leaving Thumbprint" button fills a thumbprint over 1.2 s (mouse, touch, or holding Space/Enter) and cancels on early release, so a stray tap can't sign. Once signed, the form becomes a share card (OS share sheet, WhatsApp, X, copy link for Discord).
 
 ```mermaid
 sequenceDiagram
