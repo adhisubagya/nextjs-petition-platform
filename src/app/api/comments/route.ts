@@ -5,6 +5,7 @@ import { adminDb, petitionId } from "@/lib/firebase/admin";
 import { getComments } from "@/lib/petition";
 import { commentRequestSchema } from "@/lib/schemas";
 import { allowComment, allowCommentRead } from "@/lib/server/ratelimit";
+import { signerUid } from "@/lib/server/signer-auth";
 import { verifyTurnstile } from "@/lib/server/turnstile";
 import type { Comment } from "@/lib/types";
 
@@ -57,12 +58,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ comment: { id: `demo-${crypto.randomUUID()}`, ...comment }, demo: true }, { status: 201 });
   }
 
+  // Live mode: one signature per signed-in email. The uid comes from a verified Firebase ID token.
+  const uid = await signerUid(req);
+  if (!uid) return NextResponse.json({ error: "Sign in with your email first." }, { status: 401 });
+  // Avatars must be the signer's own upload in our bucket (storage.rules: avatars/{uid}/...).
+  const avatarPrefix = `https://firebasestorage.googleapis.com/v0/b/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/o/avatars%2F${uid}%2F`;
+  if (comment.avatarUrl && !comment.avatarUrl.startsWith(avatarPrefix)) {
+    return NextResponse.json({ error: "Invalid avatar" }, { status: 400 });
+  }
+
   const db = adminDb();
   const petition = db.collection("petitions").doc(petitionId());
   const ref = petition.collection("comments").doc();
-  const batch = db.batch();
-  batch.set(ref, { ...comment, createdAt: Timestamp.fromDate(createdAt) });
-  batch.update(petition, { signatureCount: FieldValue.increment(1) });
-  await batch.commit();
+  // Private, rules-denied doc keyed by uid: created in the same transaction, so a second signature can't slip in.
+  const signer = petition.collection("signers").doc(uid);
+  const signed = await db.runTransaction(async (tx) => {
+    if ((await tx.get(signer)).exists) return false;
+    tx.create(signer, { commentId: ref.id, createdAt: Timestamp.fromDate(createdAt) });
+    tx.set(ref, { ...comment, createdAt: Timestamp.fromDate(createdAt) });
+    tx.update(petition, { signatureCount: FieldValue.increment(1) });
+    return true;
+  });
+  if (!signed) return NextResponse.json({ error: "You have already signed this petition." }, { status: 409 });
   return NextResponse.json({ comment: { id: ref.id, ...comment }, demo: false }, { status: 201 });
 }

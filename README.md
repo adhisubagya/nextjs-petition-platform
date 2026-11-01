@@ -26,7 +26,7 @@ The public deployment runs in **Demo Mode**: everything works in the browser, bu
 | Domain and TLS | Porkbun registrar, Cloudflare DNS with SSL/TLS **Full (strict)** |
 | Database | Firebase Firestore |
 | File storage | Firebase Cloud Storage (avatars only) |
-| Auth | Firebase Auth (admin only) |
+| Auth | Firebase Auth: admin email/password; signers via email code + custom token (live mode) |
 | Forms and validation | React Hook Form + Zod |
 | Server state | TanStack Query |
 | Bot protection | Cloudflare Turnstile |
@@ -55,7 +55,7 @@ flowchart LR
   AA -->|"live mode only"| F
 ```
 
-All Firestore reads and writes go through the server with the Firebase Admin SDK. The Firestore rules deny every client write (`firestore.rules`), so validation, rate limiting and bot checks can't be bypassed by calling Firebase directly. The one direct client write is the avatar upload, which `storage.rules` limits to new image files under 200KB in `avatars/`.
+All Firestore reads and writes go through the server with the Firebase Admin SDK. The Firestore rules deny every client write (`firestore.rules`), so validation, rate limiting and bot checks can't be bypassed by calling Firebase directly. The one direct client write is the avatar upload: `storage.rules` accepts only new images under 200KB, from a signed-in signer, into their own `avatars/{uid}/` folder, and the API accepts only avatar URLs from that folder. Demo Mode never uploads.
 
 ### Data model
 
@@ -87,7 +87,8 @@ sequenceDiagram
   alt Demo Mode
     API-->>U: 201 { comment, demo: true } (no write)
   else Live
-    API->>DB: batch: add comment + increment signatureCount
+    API->>API: verify Firebase ID token → 401
+    API->>DB: transaction: signers/{uid} exists? → 409, else add comment + signer + increment signatureCount
     API-->>U: 201 { comment, demo: false }
   end
   U->>U: Prepend comment, bump count (React state)
@@ -126,7 +127,7 @@ Each kind of state lives in the tool built for it:
 
 - **Seeded data**: `npm run seed` writes one petition at 8,452 signatures and 18 comments. It refuses to run if comments already exist. Without Firebase credentials, the app serves the same seed data from memory, so a fresh clone works offline.
 - **Intercepted writes**: `POST /api/comments` runs the full pipeline (rate limit, validation, Turnstile) and returns a normal `201` but skips Firestore. The browser shows the comment from React state, and avatars are previewed locally and never uploaded.
-- **Email sign-in without email**: the code request runs validation, Turnstile and rate limits, then returns the code to the screen in a "Demo Mode" notice instead of emailing it. No account is created. Live mode returns `501` until an email provider and Firebase custom tokens are wired in (ADR 0003).
+- **Email sign-in without email**: the code request runs validation, Turnstile and rate limits, then returns the code to the screen in a "Demo Mode" notice instead of emailing it. No account is created. In live mode the code is emailed (Brevo, falling back to Resend, then Mailjet) and verify returns a Firebase custom token; `POST /api/comments` then requires the signer's ID token and allows one signature per account. Demo Mode has no server-side sign-in check: the sign-in gate is in the browser only, since nothing is written (ADR 0003).
 - **View-only admin**: the login screen prints the demo credentials. In the dashboard, the Max signatures input, Save and Pin show "Action disabled in Demo Mode." The admin write endpoints also return `403` in Demo Mode, so the UI is not the only guard.
 - **Aggressive caching**: the petition page and OG image use `revalidate = 86400`, and `GET /api/comments` sends `s-maxage=86400`. Firestore is read about once a day, however many people visit.
 
@@ -152,6 +153,8 @@ The app runs with an empty `.env.local`. Add services one at a time:
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Rate limiting |
 | `NEXT_PUBLIC_POSTHOG_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_PERSONAL_API_KEY` | Tracking and real dashboard stats |
 | `NEXT_PUBLIC_SITE_URL` | Absolute URLs for Open Graph and share links |
+| `OTP_HMAC_SECRET`, `EMAIL_FROM`, `BREVO_API_KEY` (+ optional `RESEND_API_KEY`, `MAILJET_API_KEY`/`MAILJET_SECRET_KEY`) | Live-mode email codes with provider fallback |
+| `CSP_ENFORCE=true` | Enforce the full Content Security Policy instead of report-only |
 
 ### Firebase setup
 
@@ -196,7 +199,7 @@ src/
     schemas.ts               Zod schemas shared by client and server
     petition.ts              Firestore reads with seed fallback
     firebase/                Client and Admin SDK setup
-    server/                  Rate limit, Turnstile, admin auth, PostHog
+    server/                  Rate limit, Turnstile, admin and signer auth, email codes, PostHog
 scripts/seed.ts
 firestore.rules, storage.rules, firestore.indexes.json
 ```

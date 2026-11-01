@@ -18,6 +18,12 @@ const formSchema = commentFieldsSchema.omit({ avatarUrl: true }).extend({ anonym
 type FormValues = z.infer<typeof formSchema>;
 
 
+async function liveIdToken() {
+  const auth = (await import("@/lib/firebase/client")).clientAuth();
+  await auth.authStateReady(); // after a reload the session is restored asynchronously
+  return auth.currentUser?.getIdToken() ?? null;
+}
+
 type Props = { email: string; onSigned: (comment: Comment) => void; onSignOut: () => void };
 
 export function SignForm({ email, onSigned, onSignOut }: Props) {
@@ -37,11 +43,13 @@ export function SignForm({ email, onSigned, onSignOut }: Props) {
       // Loaded on demand so Firebase Storage and the compressor stay out of the first page load.
       const { compressAvatar, uploadAvatar } = await import("@/lib/avatar");
       const small = avatar ? await compressAvatar(avatar) : null;
+      // Live mode: the API checks this Firebase ID token and allows one signature per account.
+      const idToken = DEMO_MODE ? null : await liveIdToken();
       // Demo Mode keeps Storage at zero writes too; the preview uses a local object URL.
       const avatarUrl = small && !DEMO_MODE ? await uploadAvatar(small) : null;
       const res = await fetch("/api/comments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(idToken && { Authorization: `Bearer ${idToken}` }) },
         body: JSON.stringify({ ...values, avatarUrl, turnstileToken: token }),
       });
       const body = await res.json();

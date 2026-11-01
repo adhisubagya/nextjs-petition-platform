@@ -1,9 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { DEMO_MODE } from "@/lib/demo";
 
-// Demo Mode signer state: browser tab session only, never sent to Firestore.
-// Live mode will swap this for Firebase Auth (onAuthStateChanged) behind the same hook.
+// Signer UI state for this tab. In live mode the Firebase Auth session (custom token) is what the API trusts.
 export type Signer = { email: string; signed: boolean };
 
 const KEY = "signer";
@@ -39,6 +39,9 @@ export function useSigner() {
     signer,
     signIn: (email: string) => write({ email, signed: false }),
     markSigned: () => signer && write({ ...signer, signed: true }),
-    signOut: () => write(null),
+    signOut: () => {
+      write(null);
+      if (!DEMO_MODE) void import("@/lib/firebase/client").then(({ clientAuth }) => clientAuth().signOut());
+    },
   };
 }
