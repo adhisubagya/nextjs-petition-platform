@@ -34,3 +34,19 @@ describe("POST /api/comments in Demo Mode", () => {
     expect(res.status).toBe(400);
   });
 });
+
+const { GET } = await import("./route");
+const get = (query: string) => GET(new NextRequest(`http://localhost/api/comments${query}`));
+
+describe("GET /api/comments cursor", () => {
+  it("serves the first page and a valid next page", async () => {
+    const first = await (await get("")).json();
+    expect(first.comments).toHaveLength(10);
+    expect((await get(`?cursor=${first.nextCursor}`)).status).toBe(200);
+  });
+
+  it("rejects cursors that are not document IDs", async () => {
+    expect((await get("?cursor=random-cache-buster")).status).toBe(400);
+    expect((await get("?cursor=")).status).toBe(400);
+  });
+});
