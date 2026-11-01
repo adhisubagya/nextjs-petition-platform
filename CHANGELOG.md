@@ -19,4 +19,5 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 ### Added
 
 - Email + 6-digit code sign-in before signing (ADR 0003). In Demo Mode no email is sent and the code is shown on screen.
+- "Send as Anonymous" (checked by default), honeypot and spam checks on comments, and a share card (OS share sheet, WhatsApp, X, copy link for Discord) that replaces the form after signing.
 - Site-wide copyright footer ("© 2026 DAWN. All rights reserved.").

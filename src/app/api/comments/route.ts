@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input", issues: parsed.error.flatten().fieldErrors }, { status: 400 });
   }
-  const { turnstileToken, ...input } = parsed.data;
+  const { turnstileToken, website, ...input } = parsed.data;
 
   if (!(await verifyTurnstile(turnstileToken, ip))) {
     return NextResponse.json({ error: "Verification failed" }, { status: 403 });
@@ -46,6 +46,11 @@ export async function POST(req: NextRequest) {
 
   const createdAt = new Date();
   const comment: Omit<Comment, "id"> = { ...input, pinned: false, createdAt: createdAt.toISOString() };
+
+  // Honeypot filled: answer like a success so the bot learns nothing, and write nothing.
+  if (website) {
+    return NextResponse.json({ comment: { id: `demo-${crypto.randomUUID()}`, ...comment }, demo: true }, { status: 201 });
+  }
 
   // Demo Mode: behave exactly like a successful write, but never touch Firestore.
   if (DEMO_MODE) {

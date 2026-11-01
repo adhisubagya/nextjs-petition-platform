@@ -68,6 +68,8 @@ Comments are ordered `pinned DESC, createdAt DESC` (composite index in `firestor
 
 ### Signing a petition
 
+Visitors sign in with their email and a 6-digit code first (`/api/auth/code`, `/api/auth/verify`; see [ADR 0003](docs/adr/0003-email-code-sign-in.md)). Codes are stored only as an HMAC for 10 minutes, allow 5 attempts and work once. "Send as Anonymous" is checked by default and replaces the name with "Anonymous" on the server. Once signed, the form becomes a share card (OS share sheet, WhatsApp, X, copy link for Discord).
+
 ```mermaid
 sequenceDiagram
   participant U as Browser
@@ -93,11 +95,11 @@ sequenceDiagram
 
 ## Rate limiting
 
-`POST /api/comments` uses a sliding window of **3 requests per IP per minute** (`src/lib/server/ratelimit.ts`), backed by Upstash Redis so the limit holds across every serverless instance and region. The check runs first, before parsing or calling Turnstile, so abusive clients cost one Redis call and nothing else. Over the limit, the API returns `429`.
+`POST /api/comments` uses a sliding window of **3 requests per IP per minute** (sign-in codes: 5 per IP per 10 minutes and 3 per email per 15 minutes; code checks: 10 per IP per 10 minutes; comment pages that miss the edge cache: 30 per IP per minute) (`src/lib/server/ratelimit.ts`), backed by Upstash Redis so the limit holds across every serverless instance and region. The check runs first, before parsing or calling Turnstile, so abusive clients cost one Redis call and nothing else. Over the limit, the API returns `429`.
 
 It works in layers with the other defences:
 
-1. **Zod** caps lengths and rejects blank or malformed input on both client and server
+1. **Zod** caps lengths and rejects blank, malformed or spammy input (several links, long repeated characters, all caps) on both client and server; a hidden honeypot field gets a fake success
 2. **Turnstile** proves a human is submitting, which stops scripted mass signing
 3. **Upstash** caps how fast any single IP can post
 4. **Firestore rules** make the server the only writer
@@ -114,6 +116,7 @@ Each kind of state lives in the tool built for it:
 | Further comment pages | TanStack Query keyed by cursor | Each page is fetched once, cached, and kept on screen while the next loads (`keepPreviousData`) |
 | Sign form fields and errors | React Hook Form (uncontrolled inputs) | No re-render per keystroke; Zod schema shared with the API |
 | Comments signed this session | `useState` in `PetitionBody` | Instant feedback, and in Demo Mode the only place they exist |
+| Demo signer (email, signed) | `sessionStorage` via `useSigner` | Survives a reload in the tab, gone when it closes; never sent to Firestore |
 | Admin session | Firebase Auth listener | Token refresh handled by the SDK; the server verifies every request |
 | Toasts | `sonner` | Fire-and-forget UI feedback |
 
@@ -123,6 +126,7 @@ Each kind of state lives in the tool built for it:
 
 - **Seeded data**: `npm run seed` writes one petition at 8,452 signatures and 18 comments. It refuses to run if comments already exist. Without Firebase credentials, the app serves the same seed data from memory, so a fresh clone works offline.
 - **Intercepted writes**: `POST /api/comments` runs the full pipeline (rate limit, validation, Turnstile) and returns a normal `201` but skips Firestore. The browser shows the comment from React state, and avatars are previewed locally and never uploaded.
+- **Email sign-in without email**: the code request runs validation, Turnstile and rate limits, then returns the code to the screen in a "Demo Mode" notice instead of emailing it. No account is created. Live mode returns `501` until an email provider and Firebase custom tokens are wired in (ADR 0003).
 - **View-only admin**: the login screen prints the demo credentials. In the dashboard, the Max signatures input, Save and Pin show "Action disabled in Demo Mode." The admin write endpoints also return `403` in Demo Mode, so the UI is not the only guard.
 - **Aggressive caching**: the petition page and OG image use `revalidate = 86400`, and `GET /api/comments` sends `s-maxage=86400`. Firestore is read about once a day, however many people visit.
 
