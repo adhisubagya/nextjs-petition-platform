@@ -1,10 +1,17 @@
 import "server-only";
 import { DEMO_MODE } from "@/lib/demo";
 
-export async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
+// Cloudflare's published test secrets (always pass / always fail / token spent).
+export const isTestSecret = (secret: string) => /^[123]x0{20,}/.test(secret);
+
+export async function verifyTurnstile(token: string, ip: string, demo = DEMO_MODE): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  // Demo Mode writes nothing, so an unconfigured demo deploy may skip verification; live mode never may.
-  if (!secret) return DEMO_MODE;
+  // Demo Mode writes nothing, so an unconfigured or test-key demo deploy is fine; live mode needs a real key.
+  if (!secret) return demo;
+  if (!demo && isTestSecret(secret)) {
+    console.error("turnstile: test secret key in live mode; set a real TURNSTILE_SECRET_KEY");
+    return false;
+  }
   const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
     method: "POST",
     body: new URLSearchParams({ secret, response: token, remoteip: ip }),
