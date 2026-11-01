@@ -1,6 +1,7 @@
 # ADR 0003: Email-code sign-in before signing, Demo Mode first
 
-- Status: Accepted (Demo Mode built; live mode pending provider choice)
+- Status: Accepted (Demo Mode built; live mode built behind the switch, off)
+- Updated: 2026-11-02 (Brevo first, ordered fallback)
 - Date: 2026-11-01
 
 ## Context
@@ -11,12 +12,12 @@ Anyone can sign as often as the rate limit allows, so the signature count can be
 
 1. **Custom 6-digit email code.** `POST /api/auth/code` validates the email (Zod), checks Turnstile and rate limits (per IP 5/10 min, per email 3/15 min), then issues a code. Only `HMAC-SHA256(OTP_HMAC_SECRET, email:code)` is stored, in Upstash under `otp:{sha256(email)}`, for 10 minutes. `POST /api/auth/verify` allows 5 attempts per code, compares in constant time, and deletes the code on success (single use).
 2. **Demo Mode (`NEXT_PUBLIC_DEMO_MODE` not `false`):** no email is sent and no account is created. The code is returned to the browser and shown in a notice labelled "Demo Mode". A successful verify sets a session-only flag in `sessionStorage`; signing and the "already signed" state stay in that tab session. No Firestore writes.
-3. **Live mode** returns `501` from both endpoints until the follow-up PRs land:
-   - email delivery through one `sendEmail()` function (Resend primary, Brevo fallback, pending decision),
+3. **Live mode** (off until `NEXT_PUBLIC_DEMO_MODE=false`) adds:
    - verify returns a Firebase custom token (`signInWithCustomToken`); write APIs require `Authorization: Bearer <idToken>`,
    - one signature per account via a private `signers/{uid}` doc created in the same Firestore transaction as the comment and counter,
    - real Turnstile keys and avatar upload lockdown (security review H1, H3).
-4. Signers choose **Send as Anonymous** (checked by default); the public comment then stores only "Anonymous".
+4. **Email delivery** goes through one `sendEmail()` (`src/lib/server/email.ts`) over each provider's HTTP API, in order: **Brevo** (300/day free) → **Resend** (100/day) → **Mailjet** (200/day, optional), about 600 codes a day on free plans. A provider is used only if its key is set. Each has a daily counter in Upstash (`mail:{provider}:{UTC date}`, 48 h TTL) and is skipped at 95% of its cap. `429` marks it spent for the day; `5xx`, auth and network errors move to the next provider at once; `400`/`422` (bad address) stop, since every provider would refuse it. The code is issued once before sending, so failover never changes it. HTTP APIs, not SMTP: same quotas, no extra dependency, faster cold starts on Vercel.
+5. Signers choose **Send as Anonymous** (checked by default); the public comment then stores only "Anonymous".
 
 ## Consequences
 

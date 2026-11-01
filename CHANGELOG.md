@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Security
 
+- Live mode (still off): signing requires a Firebase ID token from email-code sign-in, one signature per account via a `signers/{uid}` doc in the same transaction, Turnstile refuses missing or test secret keys, avatar uploads require sign-in into the signer's own folder, and `CSP_ENFORCE=true` switches the full CSP from report-only to enforced.
 - Security headers on every response (clickjacking block, nosniff, referrer and permissions policy), a report-only CSP, and no `x-powered-by`; the comments API rejects malformed cursors and rate-limits paginated reads.
 
 ### Changed
@@ -19,6 +20,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 ### Added
 
 - Hold to sign: the Sign button is now a press-and-hold "Leaving Thumbprint" button whose thumbprint fills in while held (mouse, touch, or holding Space/Enter); releasing early cancels, and reduced-motion users get a stepped fill.
+- Live-mode email delivery for sign-in codes with ordered free-provider fallback (Brevo → Resend → Mailjet), per-provider daily counters in Upstash and instant failover on 429/5xx. Off while Demo Mode is on.
 - Email + 6-digit code sign-in before signing (ADR 0003). In Demo Mode no email is sent and the code is shown on screen.
 - "Send as Anonymous" (checked by default), honeypot and spam checks on comments, and a share card (OS share sheet, WhatsApp, X, copy link for Discord) that replaces the form after signing.
 - Site-wide copyright footer ("© 2026 DAWN. All rights reserved.").

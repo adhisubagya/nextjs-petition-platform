@@ -55,7 +55,12 @@ export function SignInCard({ onSignedIn }: { onSignedIn: (email: string) => void
     const parsed = codeSchema.safeParse(code);
     if (!parsed.success) return setError(parsed.error.issues[0].message);
     run(async () => {
-      await post("/api/auth/verify", { email, code: parsed.data });
+      const data = await post("/api/auth/verify", { email, code: parsed.data });
+      // Live mode only: the server returns a Firebase custom token; Demo Mode creates no account.
+      if (data.token) {
+        const [{ signInWithCustomToken }, { clientAuth }] = await Promise.all([import("firebase/auth"), import("@/lib/firebase/client")]);
+        await signInWithCustomToken(clientAuth(), data.token);
+      }
       onSignedIn(email);
     });
   };
