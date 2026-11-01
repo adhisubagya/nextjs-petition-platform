@@ -5,24 +5,31 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { ImagePlus, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { DEMO_MODE } from "@/lib/demo";
-import { commentInputSchema, MESSAGE_MAX, NAME_MAX } from "@/lib/schemas";
+import { commentFieldsSchema, MESSAGE_MAX, NAME_MAX, hasName, nameIssue } from "@/lib/schemas";
 import { siteKey } from "@/lib/turnstile";
 import type { Comment } from "@/lib/types";
 
-const formSchema = commentInputSchema.omit({ avatarUrl: true });
-type FormValues = { name: string; message: string };
+const formSchema = commentFieldsSchema.omit({ avatarUrl: true }).extend({ anonymous: z.boolean(), website: z.string() }).refine(hasName, nameIssue);
+type FormValues = z.infer<typeof formSchema>;
 
 
-export function SignForm({ onSigned }: { onSigned: (comment: Comment) => void }) {
+type Props = { email: string; onSigned: (comment: Comment) => void; onSignOut: () => void };
+
+export function SignForm({ email, onSigned, onSignOut }: Props) {
   const [token, setToken] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const { register, handleSubmit, reset, formState } = useForm<FormValues>({ resolver: zodResolver(formSchema) });
+  const { register, handleSubmit, watch, formState } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { name: "", message: "", anonymous: true, website: "" },
+  });
   const { errors, isSubmitting } = formState;
+  const anonymous = watch("anonymous");
 
   async function onSubmit(values: FormValues) {
     setStatus(null);
@@ -39,10 +46,8 @@ export function SignForm({ onSigned }: { onSigned: (comment: Comment) => void })
       });
       const body = await res.json();
       if (!res.ok) return setStatus(body.error ?? "Something went wrong.");
+      // The parent swaps this form for the share card, so there is nothing to reset.
       onSigned({ ...body.comment, avatarUrl: body.comment.avatarUrl ?? (small && URL.createObjectURL(small)) });
-      reset();
-      setAvatar(null);
-      setStatus(body.demo ? "Thanks for signing! (Demo Mode: nothing was saved.)" : "Thanks for signing!");
     } catch {
       setStatus("Network error. Please try again.");
     }
@@ -52,14 +57,33 @@ export function SignForm({ onSigned }: { onSigned: (comment: Comment) => void })
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="text-xl">Sign the petition</CardTitle>
-        <CardDescription>Add your name and a short message of support.</CardDescription>
+        <CardDescription>
+          Signed in as <span className="text-foreground">{email}</span> ·{" "}
+          <button type="button" className="underline underline-offset-2 hover:text-foreground" onClick={onSignOut}>
+            Sign out
+          </button>
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" maxLength={NAME_MAX} placeholder="Your name" aria-invalid={!!errors.name} {...register("name")} />
-            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-0.5 size-4 accent-primary" {...register("anonymous")} />
+            <span>
+              Send as Anonymous
+              <span className="block text-xs text-muted-foreground">Anonymous to the public, not to the organiser.</span>
+            </span>
+          </label>
+          {!anonymous && (
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" maxLength={NAME_MAX} placeholder="Your name" aria-invalid={!!errors.name} {...register("name")} />
+              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+            </div>
+          )}
+          {/* Honeypot: off-screen and skipped by keyboard and screen readers; only bots fill it. */}
+          <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
+            <label htmlFor="website">Website</label>
+            <input id="website" tabIndex={-1} autoComplete="off" {...register("website")} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="message">Comment</Label>

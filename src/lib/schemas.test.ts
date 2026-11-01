@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { commentRequestSchema, NAME_MAX } from "./schemas";
 
-const valid = { name: "Signer", message: "I support this.", turnstileToken: "tok" };
+const valid = { name: "Signer", message: "I support this.", anonymous: false, turnstileToken: "tok" };
 
 describe("commentRequestSchema", () => {
   it("accepts a valid comment and defaults avatarUrl", () => {
@@ -18,5 +18,20 @@ describe("commentRequestSchema", () => {
   });
   it("rejects a non-URL avatar", () => {
     expect(commentRequestSchema.safeParse({ ...valid, avatarUrl: "javascript:alert(1)" }).success).toBe(false);
+  });
+  it("signs as Anonymous by default and drops the typed name", () => {
+    const rest = { ...valid, anonymous: undefined };
+    expect(commentRequestSchema.parse({ ...rest, name: "Real Name" })).toMatchObject({ name: "Anonymous", anonymous: true });
+    expect(commentRequestSchema.safeParse({ ...rest, name: "" }).success).toBe(true);
+  });
+  it("requires a name when not anonymous", () => {
+    expect(commentRequestSchema.safeParse({ ...valid, name: " " }).success).toBe(false);
+  });
+  it.each([
+    ["two links", "see https://a.example and www.b.example"],
+    ["repeated characters", "yes!!!!!!!!!!"],
+    ["all caps", "SIGN THIS PETITION RIGHT NOW PLEASE"],
+  ])("rejects spammy comments: %s", (_label, message) => {
+    expect(commentRequestSchema.safeParse({ ...valid, message }).success).toBe(false);
   });
 });

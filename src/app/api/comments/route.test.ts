@@ -16,11 +16,21 @@ const post = (body: unknown) =>
 
 describe("POST /api/comments in Demo Mode", () => {
   it("returns the new comment without writing", async () => {
-    const res = await post({ name: " Signer ", message: "Count me in", turnstileToken: "tok" });
+    const res = await post({ name: " Signer ", message: "Count me in", anonymous: false, turnstileToken: "tok" });
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.demo).toBe(true);
     expect(body.comment).toMatchObject({ name: "Signer", message: "Count me in", pinned: false });
+  });
+
+  it("signs as Anonymous by default", async () => {
+    const res = await post({ name: "Real Name", message: "Count me in", turnstileToken: "tok" });
+    expect((await res.json()).comment.name).toBe("Anonymous");
+  });
+
+  it("answers a filled honeypot like a success", async () => {
+    const res = await post({ name: "", message: "Count me in", website: "spam.example", turnstileToken: "tok" });
+    expect(res.status).toBe(201);
   });
 
   it("rejects a blank comment", async () => {
