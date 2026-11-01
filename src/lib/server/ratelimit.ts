@@ -17,4 +17,6 @@ export const allowCommentRead = limiter(30, "1 m", "rl:comments-read");
 // Email-code sign-in: caps inbox flooding per address and code guessing per IP.
 export const allowCodeRequestByIp = limiter(5, "10 m", "rl:code-ip");
 export const allowCodeRequestByEmail = limiter(3, "15 m", "rl:code-email");
+// Daily cap too, so one inbox can't be flooded with ~288 codes a day.
+export const allowCodeRequestByEmailDaily = limiter(5, "1 d", "rl:code-email-day");
 export const allowVerify = limiter(10, "10 m", "rl:verify");

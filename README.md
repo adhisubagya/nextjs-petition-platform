@@ -55,7 +55,7 @@ flowchart LR
   AA -->|"live mode only"| F
 ```
 
-All Firestore reads and writes go through the server with the Firebase Admin SDK. The Firestore rules deny every client write (`firestore.rules`), so validation, rate limiting and bot checks can't be bypassed by calling Firebase directly. The one direct client write is the avatar upload: `storage.rules` accepts only new images under 200KB, from a signed-in signer, into their own `avatars/{uid}/` folder, and the API accepts only avatar URLs from that folder. Demo Mode never uploads.
+All Firestore reads and writes go through the server with the Firebase Admin SDK. The Firestore rules deny every client write (`firestore.rules`), so validation, rate limiting and bot checks can't be bypassed by calling Firebase directly. The one direct client write is the avatar upload: `storage.rules` accepts only new images under 200KB, (WebP, PNG or JPEG) from a signer who passed the email code, into their own `avatars/{uid}/` folder, and the API accepts only avatar URLs from that folder. Demo Mode never uploads.
 
 ### Data model
 
@@ -153,7 +153,7 @@ The app runs with an empty `.env.local`. Add services one at a time:
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Rate limiting |
 | `NEXT_PUBLIC_POSTHOG_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_PERSONAL_API_KEY` | Tracking and real dashboard stats |
 | `NEXT_PUBLIC_SITE_URL` | Absolute URLs for Open Graph and share links |
-| `OTP_HMAC_SECRET`, `EMAIL_FROM`, `BREVO_API_KEY` (+ optional `RESEND_API_KEY`, `MAILJET_API_KEY`/`MAILJET_SECRET_KEY`) | Live-mode email codes with provider fallback |
+| `OTP_HMAC_SECRET`, `SIGNER_ID_SECRET`, `EMAIL_FROM`, `BREVO_API_KEY` (+ optional `RESEND_API_KEY`, `MAILJET_API_KEY`/`MAILJET_SECRET_KEY`) | Live-mode email codes with provider fallback |
 | `CSP_ENFORCE=true` | Enforce the full Content Security Policy instead of report-only |
 
 ### Firebase setup
