@@ -16,6 +16,7 @@ import { DEFAULT_RANGE, parseRange, RANGE_LABEL, RANGES, type Range } from "@/li
 import type { Summary } from "@/lib/metrics/summary";
 import { cn } from "@/lib/utils";
 import { useAdminSession } from "../AdminGate";
+import { Insights } from "./Insights";
 
 const SignaturesChart = dynamic(() => import("./SignaturesChart"), {
   ssr: false,
@@ -149,6 +150,7 @@ export function Metrics() {
         </Card>
         {d?.campaign && <PaceCard c={d.campaign} />}
       </div>
+      {d && <Insights d={d} onPick={(slug) => pick({ campaign: slug })} />}
     </section>
   );
 }
