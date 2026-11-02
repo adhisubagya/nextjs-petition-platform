@@ -55,6 +55,10 @@ export const canSign = (c: PhaseFields, now?: Date | number) => campaignPhase(c,
 export const reachesGoal = (c: Pick<Campaign, "signatureCount" | "goal" | "goalReachedAt">) =>
   c.goalReachedAt === null && c.signatureCount + 1 >= c.goal;
 
+/** goalReachedAt after an admin edit: reached now if the new goal is at or below the count, cleared if above it. */
+export const goalReachedAfterEdit = (c: Pick<Campaign, "signatureCount" | "goalReachedAt">, goal: number, now: string) =>
+  c.signatureCount >= goal ? (c.goalReachedAt ?? now) : null;
+
 export const isAchieved = (c: Pick<Campaign, "goalReachedAt">) => c.goalReachedAt !== null;
 
 export function isIanaZone(zone: string): boolean {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { campaignPhase, canSign, reachesGoal, isIanaZone, milestoneLadder, utcToWallClock, wallClockToUtc } from "./campaign";
+import { campaignPhase, canSign, goalReachedAfterEdit, reachesGoal, isIanaZone, milestoneLadder, utcToWallClock, wallClockToUtc } from "./campaign";
 import { campaignInputSchema, docToText, richTextDocSchema } from "./campaign-schema";
 
 const base = {
@@ -41,6 +41,16 @@ describe("reachesGoal", () => {
     expect(reachesGoal({ signatureCount: 10, goal: 10, goalReachedAt: "2026-11-01T00:00:00Z" })).toBe(false);
     // Already past the goal but never recorded (older docs, or goal lowered): the next signature records it.
     expect(reachesGoal({ signatureCount: 50, goal: 10, goalReachedAt: null })).toBe(true);
+  });
+});
+
+describe("goalReachedAfterEdit", () => {
+  const now = "2026-11-02T00:00:00.000Z";
+  it("records, keeps or clears the reached date when the goal changes", () => {
+    expect(goalReachedAfterEdit({ signatureCount: 120, goalReachedAt: null }, 100, now)).toBe(now);
+    expect(goalReachedAfterEdit({ signatureCount: 120, goalReachedAt: "2026-10-01T00:00:00Z" }, 100, now)).toBe("2026-10-01T00:00:00Z");
+    expect(goalReachedAfterEdit({ signatureCount: 120, goalReachedAt: "2026-10-01T00:00:00Z" }, 500, now)).toBeNull();
+    expect(goalReachedAfterEdit({ signatureCount: 100, goalReachedAt: null }, 100, now)).toBe(now);
   });
 });
 
