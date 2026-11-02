@@ -16,7 +16,7 @@ Two features for the admin panel:
 | 3 | Description format | Rich text editor with full formatting (headings, bold/italic, lists, links, quotes). |
 | 4 | Time zone, times | Per-campaign time zone; default = the logged-in admin's time zone. Start and end have a date **and** time. |
 | 5 | Scheduled campaigns | Visible before start ("Opens in 3 days"), but nobody can sign until the start time. |
-| 6 | After the end | Page stays up, dimmed, signing disabled. Shows **Achieved** when the goal was reached, otherwise **Closed**. Reaching the goal before the end date also closes signing (Achieved). |
+| 6 | Goal reached / after the end | Reaching the goal shows an **Achieved** badge but signing stays open until the end date, counting past 100%. After the end the page stays up, dimmed, signing disabled, badged **Achieved** if the goal was reached, otherwise **Closed**. |
 | 7 | Editing a live campaign | Allowed. Changing the start date of a live campaign, and deleting a campaign, each need an extra confirmation step in a modal. |
 | 8 | Ranges and "All" for traffic | Presets in §3.2. Traffic is copied once a day from PostHog into Firestore rollups, so "All" works for traffic and signatures without depending on PostHog retention (§3.3). |
 
@@ -70,11 +70,16 @@ Only `status`, the dates, `signatureCount` and `goalReachedAt` are stored. The p
 |---|---|---|---|
 | Draft | `status == "draft"` | 404 | no |
 | Scheduled | published, `now < startAt` | full page + "Opens in 3 days" countdown, sign button disabled | no |
-| Live | published, started, not ended, goal not reached | normal | yes |
-| Achieved | published, `goalReachedAt != null` (any time) | dimmed, "Achieved" badge, final count | no |
-| Closed | published, `endAt <= now`, goal not reached | dimmed, "Closed" badge, final count | no |
+| Live | published, started, not ended | normal | yes |
+| Ended | published, `endAt <= now` | dimmed, final count | no |
 
-The signing transaction reads the campaign, refuses unless the phase is Live, and sets `goalReachedAt` on the signature that reaches the goal. Two people signing at the same moment can't both slip past the goal, because Firestore transactions re-run on conflict.
+Achieved is a **badge on top of the phase**, not a phase: `achieved = goalReachedAt != null`. So a campaign can be:
+
+- **Live + Achieved**: goal reached, signing still open until the end date (or forever if Indefinitely). "Achieved" badge, progress bar full with the count shown past 100% ("10,842 of 10,000 · 108%"), sign button stays.
+- **Ended + Achieved**: dimmed, "Achieved" badge, final count, signing off.
+- **Ended, not achieved**: dimmed, "Closed" badge, final count, signing off.
+
+The signing transaction reads the campaign and refuses unless the phase is Live (the goal doesn't matter). When its increment takes `signatureCount` from below the goal to at or above it, it sets `goalReachedAt` once; Firestore transactions re-run on conflict, so it is set exactly once. Lowering the goal in the admin panel below the current count sets `goalReachedAt` to the edit time; raising it above the count clears it.
 
 "Dimmed" = the page renders normally with reduced opacity on the progress and sign area, a badge, and the sign button replaced by a disabled state with the reason. Text stays readable (contrast checked), so it is not just faded out.
 
@@ -175,7 +180,7 @@ These bring in Radix and `react-day-picker`, ending ADR 0002's "no Radix" rule. 
 
 ### 2.11 Demo Mode
 
-- Seed data has 6 campaigns covering every phase (one featured, two live, one scheduled, one achieved, one closed) so the landing page and badges are all visible.
+- Seed data has 5 campaigns covering every state (featured flag on one; one live, one live + achieved past 100%, one scheduled, one ended + achieved, one ended + closed) so the landing page and badges are all visible.
 - All admin forms and dialogs work up to the final action, which shows the Demo Mode toast; APIs return 403 before touching Firestore.
 
 ## 3. Dashboard metrics
@@ -274,9 +279,9 @@ Ordered; each row is one PR (≤ ~400 lines).
 | # | Task | Tier |
 |---|---|---|
 | 1 | ADR 0004 (multi-campaign, Radix/Recharts/Tiptap in admin, landing page cache), `components.json`, chart tokens | S |
-| 2 | Campaign type, Zod schema (incl. Tiptap doc schema), `campaignPhase()`, wall-clock ↔ UTC helpers, milestone ladder generator, all with tests; seed with 6 campaigns | M |
-| 3 | `/c/[slug]` page: server-rendered rich description, phase banner + countdown, dimmed Achieved/Closed state, milestone ticks | M |
-| 4 | Signing enforces Live phase, sets `goalReachedAt`, writes hourly rollup (transaction + tests) | M |
+| 2 | Campaign type, Zod schema (incl. Tiptap doc schema), `campaignPhase()`, wall-clock ↔ UTC helpers, milestone ladder generator, all with tests; seed with 5 campaigns | M |
+| 3 | `/c/[slug]` page: server-rendered rich description, phase banner + countdown, Achieved badge (live or ended), dimmed Ended state, progress past 100%, milestone ticks | M |
+| 4 | Signing enforces the Live window (not the goal), sets `goalReachedAt` once, writes hourly rollup (transaction + tests) | M |
 | 5 | Landing page `/`: featured, newest live, paginated list, index, `revalidate = 3600` | M |
 | 6 | Admin campaign list + API (`POST/PATCH/DELETE /api/admin/campaigns`, feature toggle, soft delete/restore, 403 in Demo Mode) | M |
 | 7 | Campaign form part 1: Field layout, title/subtitle/goal, dates + times + Today + Indefinitely, time-zone Combobox | M |
@@ -294,7 +299,6 @@ Totals: 11 M, 5 S. Order: Campaigns 1–9 (the public site works with many campa
 
 ## 5. Remaining assumptions to confirm while building
 
-- Reaching the goal before the end date closes signing (Achieved). If you'd rather let it keep collecting past 100%, it is a one-line change in `campaignPhase()`.
 - One featured campaign at a time.
 - Soft delete with restore; permanent purge is a separate, later action.
 
