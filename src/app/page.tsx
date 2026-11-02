@@ -1,19 +1,28 @@
 import type { Metadata } from "next";
 import { CampaignCard } from "@/components/CampaignCard";
 import { CampaignList } from "@/components/CampaignList";
+import { CampaignPage, campaignMetadata } from "@/components/CampaignPage";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getHighlights, listCampaigns } from "@/lib/petition";
+import { getHighlights, listCampaigns, singleModeSlug } from "@/lib/petition";
 
 // Hourly, so "newest live" and the list order catch up without a redeploy (~15 reads per regeneration).
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
+const landing: Metadata = {
   title: "Campaigns",
   description: "Open campaigns: read, sign and share.",
   openGraph: { title: "Campaigns", description: "Open campaigns: read, sign and share.", type: "website", url: "/" },
 };
 
+// Single-campaign mode (developer setting): `/` is that campaign and there is no landing page.
+export async function generateMetadata(): Promise<Metadata> {
+  const slug = await singleModeSlug();
+  return slug ? campaignMetadata(slug, "/") : landing;
+}
+
 export default async function Home() {
+  const slug = await singleModeSlug();
+  if (slug) return <CampaignPage slug={slug} path="/" />;
   const renderedAt = Date.now();
   const [{ featured, newestLive }, firstPage] = await Promise.all([getHighlights(renderedAt), listCampaigns()]);
   const highlights = [

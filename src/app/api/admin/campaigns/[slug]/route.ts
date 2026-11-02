@@ -6,7 +6,7 @@ import { goalReachedAfterEdit } from "@/lib/campaign";
 import { campaignInputSchema, slugSchema } from "@/lib/campaign-schema";
 import { DEMO_DISABLED_MESSAGE, DEMO_MODE } from "@/lib/demo";
 import { adminDb } from "@/lib/firebase/admin";
-import { getCampaign, toCampaign } from "@/lib/petition";
+import { getCampaign, singleModeSlug, toCampaign } from "@/lib/petition";
 import { guard, isAdmin } from "@/lib/server/admin-auth";
 import type { Capability } from "@/lib/settings";
 import { inputToDoc } from "@/lib/server/campaign-store";
@@ -42,6 +42,8 @@ export async function GET(req: Request, ctx: Ctx) {
 export async function PUT(req: Request, ctx: Ctx) {
   const slug = await gate(req, ctx, "edit");
   if (typeof slug !== "string") return slug;
+  const single = await singleModeSlug();
+  if (single && single !== slug) return NextResponse.json({ error: "Single-campaign mode: only the home page campaign can be edited." }, { status: 403 });
   const parsed = campaignInputSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid campaign", issues: parsed.error.flatten().fieldErrors }, { status: 400 });
   if (parsed.data.slug !== slug) return NextResponse.json({ error: "The slug can't be changed" }, { status: 400 });

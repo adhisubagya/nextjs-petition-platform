@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getComments, getHighlights, listCampaigns, PAGE_SIZE } from "./petition";
+import { getComments, getHighlights, getSingleCampaign, listCampaigns, PAGE_SIZE } from "./petition";
 
 describe("getComments (seed fallback)", () => {
   it("pages through all comments without overlap", async () => {
@@ -30,5 +30,11 @@ describe("campaign lists (seed fallback)", () => {
     const { featured, newestLive } = await getHighlights();
     expect(featured?.slug).toBe("default");
     expect(newestLive?.slug).toBe("default");
+  });
+});
+
+describe("getSingleCampaign (seed fallback)", () => {
+  it("picks the featured campaign", async () => {
+    expect((await getSingleCampaign())?.slug).toBe((await getHighlights()).featured?.slug);
   });
 });

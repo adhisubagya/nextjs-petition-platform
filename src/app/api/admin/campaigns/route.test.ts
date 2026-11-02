@@ -13,6 +13,8 @@ vi.mock("@/lib/firebase/admin", () => ({
   petitionId: () => "default",
 }));
 
+vi.mock("@/lib/server/settings", () => ({ getSettings: async () => ({ mode: "multiple", disabled: [] }) }));
+
 const list = await import("./route");
 const one = await import("./[slug]/route");
 const ctx = { params: Promise.resolve({ slug: "default" }) };

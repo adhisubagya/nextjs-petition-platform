@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "false");
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
+vi.mock("@/lib/server/settings", () => ({ getSettings: async () => ({ mode: "multiple", disabled: [] }) }));
 vi.mock("@/lib/server/admin-auth", () => ({ isAdmin: async () => true, guard: async () => null }));
+const single = vi.hoisted(() => ({ slug: null as string | null }));
+vi.mock("@/lib/petition", async (orig) => ({ ...(await orig<typeof import("@/lib/petition")>()), singleModeSlug: async () => single.slug }));
 
 // Minimal Firestore fake: top-level docs by id; updates merge shallowly.
 const docs = new Map<string, Record<string, unknown>>();
@@ -69,6 +72,9 @@ describe("admin campaign API in live mode", () => {
     expect((await one.PUT(req("PUT", input("edit-me", { goal: 500 })), ctx("edit-me"))).status).toBe(200);
     expect(docs.get("edit-me")!.goalReachedAt).toBeNull();
     expect((await one.PUT(req("PUT", input("missing")), ctx("missing"))).status).toBe(404);
+    single.slug = "home"; // single-campaign mode: only the home page campaign is editable
+    expect((await one.PUT(req("PUT", input("edit-me", { goal: 120 })), ctx("edit-me"))).status).toBe(403);
+    single.slug = null;
   });
 
   it("keeps at most one featured campaign and never features a deleted one", async () => {
