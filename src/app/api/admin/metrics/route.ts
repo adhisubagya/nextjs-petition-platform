@@ -9,7 +9,7 @@ import { parseRange, type DailyDoc } from "@/lib/metrics/range";
 import { sampleDocs } from "@/lib/metrics/sample";
 import { summarize } from "@/lib/metrics/summary";
 import { toCampaign } from "@/lib/petition";
-import { isAdmin } from "@/lib/server/admin-auth";
+import { guard } from "@/lib/server/admin-auth";
 
 // shortcut: reads a campaign's whole daily/ history (≈1 read per active day), cached 10 min and shared by every range.
 // Fine for tens of campaigns; add the monthly summary docs from the research plan if reads approach the free tier.
@@ -22,7 +22,8 @@ const dailyDocs = unstable_cache(
 
 /** Dashboard data for one campaign or all of them, over one range. Read-only, so it also works in Demo Mode. */
 export async function GET(req: Request) {
-  if (!(await isAdmin(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = await guard(req, "metrics");
+  if (denied) return denied;
   const params = new URL(req.url).searchParams;
   const range = parseRange(params.get("range"));
   const pick = params.get("campaign") ?? "all";

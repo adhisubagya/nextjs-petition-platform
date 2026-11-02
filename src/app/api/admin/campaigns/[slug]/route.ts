@@ -7,14 +7,16 @@ import { campaignInputSchema, slugSchema } from "@/lib/campaign-schema";
 import { DEMO_DISABLED_MESSAGE, DEMO_MODE } from "@/lib/demo";
 import { adminDb } from "@/lib/firebase/admin";
 import { getCampaign, toCampaign } from "@/lib/petition";
-import { isAdmin } from "@/lib/server/admin-auth";
+import { guard, isAdmin } from "@/lib/server/admin-auth";
+import type { Capability } from "@/lib/settings";
 import { inputToDoc } from "@/lib/server/campaign-store";
 
 type Ctx = { params: Promise<{ slug: string }> };
 
-// Shared gate: admin, not Demo Mode, valid slug. Returns the slug or the error response.
-async function gate(req: Request, ctx: Ctx): Promise<string | NextResponse> {
-  if (!(await isAdmin(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+// Shared gate: admin with the capability, not Demo Mode, valid slug. Returns the slug or the error response.
+async function gate(req: Request, ctx: Ctx, cap: Capability): Promise<string | NextResponse> {
+  const denied = await guard(req, cap);
+  if (denied) return denied;
   if (DEMO_MODE) return NextResponse.json({ error: DEMO_DISABLED_MESSAGE }, { status: 403 });
   const slug = slugSchema.safeParse((await ctx.params).slug);
   return slug.success ? slug.data : NextResponse.json({ error: "Invalid campaign" }, { status: 400 });
@@ -38,7 +40,7 @@ export async function GET(req: Request, ctx: Ctx) {
 
 /** Full edit from the campaign form. The slug is fixed once created. */
 export async function PUT(req: Request, ctx: Ctx) {
-  const slug = await gate(req, ctx);
+  const slug = await gate(req, ctx, "edit");
   if (typeof slug !== "string") return slug;
   const parsed = campaignInputSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid campaign", issues: parsed.error.flatten().fieldErrors }, { status: 400 });
@@ -65,9 +67,9 @@ const flagSchema = z.union([z.object({ featured: z.boolean() }).strict(), z.obje
 
 /** Feature toggle (at most one featured) and soft delete / restore. */
 export async function PATCH(req: Request, ctx: Ctx) {
-  const slug = await gate(req, ctx);
-  if (typeof slug !== "string") return slug;
   const parsed = flagSchema.safeParse(await req.json().catch(() => null));
+  const slug = await gate(req, ctx, parsed.data && "deleted" in parsed.data ? "delete" : "feature");
+  if (typeof slug !== "string") return slug;
   if (!parsed.success) return NextResponse.json({ error: "Invalid change" }, { status: 400 });
   const change = parsed.data;
 

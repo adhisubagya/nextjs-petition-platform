@@ -68,7 +68,9 @@ describe("summarize", () => {
 
 describe("metrics API in Demo Mode", async () => {
   vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }));
-  vi.mock("@/lib/server/admin-auth", () => ({ isAdmin: async (req: Request) => req.headers.get("x-admin") === "1" }));
+  vi.mock("@/lib/server/admin-auth", () => ({
+    guard: async (req: Request) => (req.headers.get("x-admin") === "1" ? null : Response.json({ error: "Unauthorized" }, { status: 401 })),
+  }));
   const { GET } = await import("@/app/api/admin/metrics/route");
   const get = (qs: string, admin = true) => GET(new Request(`http://x/api/admin/metrics?${qs}`, { headers: admin ? { "x-admin": "1" } : {} }));
 

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "false");
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
-vi.mock("@/lib/server/admin-auth", () => ({ isAdmin: async () => true }));
+vi.mock("@/lib/server/admin-auth", () => ({ isAdmin: async () => true, guard: async () => null }));
 
 // Minimal Firestore fake: top-level docs by id; updates merge shallowly.
 const docs = new Map<string, Record<string, unknown>>();

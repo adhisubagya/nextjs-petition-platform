@@ -13,7 +13,7 @@ import { campaignPhase, isAchieved, type Campaign, type Phase } from "@/lib/camp
 import { DEMO_DISABLED_MESSAGE, DEMO_MODE } from "@/lib/demo";
 import { formatInZone } from "@/lib/use-phase";
 import { cn } from "@/lib/utils";
-import { useAdminSession } from "./AdminGate";
+import { useAdminSession, useAdminSettings } from "./AdminGate";
 import { AdminShell } from "./AdminShell";
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -21,6 +21,7 @@ const PHASE: Record<Phase, string> = { draft: "Draft", scheduled: "Scheduled", l
 
 export function CampaignsAdmin() {
   const session = useAdminSession();
+  const { can } = useAdminSettings();
   const qc = useQueryClient();
   const [showDeleted, setShowDeleted] = useState(false);
   const [deleting, setDeleting] = useState<Campaign | null>(null);
@@ -52,9 +53,11 @@ export function CampaignsAdmin() {
             </Button>
           ))}
         </div>
-        <Link href="/admin/campaigns/new" className={buttonVariants({ size: "sm" })}>
-          <Plus aria-hidden /> New campaign
-        </Link>
+        {can("create") && (
+          <Link href="/admin/campaigns/new" className={buttonVariants({ size: "sm" })}>
+            <Plus aria-hidden /> New campaign
+          </Link>
+        )}
       </div>
       <ConfirmDialog
         open={deleting !== null}
@@ -126,12 +129,14 @@ export function CampaignsAdmin() {
                           </Link>
                         )}
                         {c.deletedAt ? (
-                          <Button variant="outline" size="icon" aria-label={`Restore ${c.title}`} onClick={() => change(c.slug, { deleted: false }, "Restored")}>
-                            <ArchiveRestore aria-hidden />
-                          </Button>
+                          can("delete") && (
+                            <Button variant="outline" size="icon" aria-label={`Restore ${c.title}`} onClick={() => change(c.slug, { deleted: false }, "Restored")}>
+                              <ArchiveRestore aria-hidden />
+                            </Button>
+                          )
                         ) : (
                           <>
-                            <Button
+                            {can("feature") && <Button
                               variant="outline"
                               size="icon"
                               aria-label={c.featured ? `Unfeature ${c.title}` : `Feature ${c.title}`}
@@ -139,10 +144,12 @@ export function CampaignsAdmin() {
                               onClick={() => change(c.slug, { featured: !c.featured }, c.featured ? "No longer featured" : "Featured")}
                             >
                               <Star aria-hidden className={cn(c.featured && "fill-current")} />
-                            </Button>
-                            <Button variant="outline" size="icon" aria-label={`Delete ${c.title}`} onClick={() => setDeleting(c)}>
-                              <Trash2 aria-hidden />
-                            </Button>
+                            </Button>}
+                            {can("delete") && (
+                              <Button variant="outline" size="icon" aria-label={`Delete ${c.title}`} onClick={() => setDeleting(c)}>
+                                <Trash2 aria-hidden />
+                              </Button>
+                            )}
                           </>
                         )}
                       </div>

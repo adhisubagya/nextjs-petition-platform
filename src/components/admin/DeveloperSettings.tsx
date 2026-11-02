@@ -1,0 +1,85 @@
+"use client";
+
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { adminApi } from "@/lib/admin-api";
+import { CAPABILITIES, MODES, type Capability, type Settings } from "@/lib/settings";
+import { useAdminSession, useAdminSettings } from "./AdminGate";
+import { AdminShell } from "./AdminShell";
+
+const choice = "flex items-center gap-3 rounded-lg border px-3 py-2 text-sm has-[:checked]:border-foreground";
+
+/** Developer-only: system mode and which admin capabilities other admins may use. The server enforces both. */
+export function DeveloperSettings() {
+  const session = useAdminSession();
+  const qc = useQueryClient();
+  const { settings, developer } = useAdminSettings();
+  const [draft, setDraft] = useState<Settings>(settings);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => setDraft(settings), [settings]);
+
+  const toggle = (cap: Capability, on: boolean) =>
+    setDraft((d) => ({ ...d, disabled: on ? d.disabled.filter((c) => c !== cap) : [...d.disabled, cap] }));
+
+  async function save() {
+    setSaving(true);
+    try {
+      await adminApi(session, "/api/admin/settings", { method: "PUT", body: JSON.stringify(draft) });
+      toast.success("Settings saved");
+      await qc.invalidateQueries({ queryKey: ["admin-settings"] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <AdminShell email={session.email} title="Developer">
+      {!developer ? (
+        <p className="text-sm text-muted-foreground">Developer access only.</p>
+      ) : (
+        <div className="grid max-w-2xl gap-6">
+          <Card className="rounded-2xl">
+            <CardHeader>
+              <CardTitle>System mode</CardTitle>
+              <CardDescription>
+                Single campaign: the home page is that campaign, campaign links go home, and admins can only edit it. Multiple campaigns: every feature is on.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2">
+              {(Object.keys(MODES) as Settings["mode"][]).map((mode) => (
+                <label key={mode} className={choice}>
+                  <input type="radio" name="mode" checked={draft.mode === mode} onChange={() => setDraft((d) => ({ ...d, mode }))} />
+                  {MODES[mode]}
+                </label>
+              ))}
+            </CardContent>
+          </Card>
+          <Card className="rounded-2xl">
+            <CardHeader>
+              <CardTitle>Admin capabilities</CardTitle>
+              <CardDescription>What other admins may do. Developers keep every capability the mode allows.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2">
+              {(Object.keys(CAPABILITIES) as Capability[]).map((cap) => (
+                <label key={cap} className={choice}>
+                  <input type="checkbox" checked={!draft.disabled.includes(cap)} onChange={(e) => toggle(cap, e.target.checked)} />
+                  {CAPABILITIES[cap]}
+                </label>
+              ))}
+            </CardContent>
+          </Card>
+          <div>
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </AdminShell>
+  );
+}

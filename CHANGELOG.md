@@ -24,6 +24,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Developer settings at /admin/developer (developer accounts only): switch each admin capability (create, edit, feature, delete, pin comments, goal, metrics, health) on or off for other admins, and choose single-campaign or multiple-campaign mode. Enforced on every admin API route; stored in the server-only `config/settings` doc. ADR 0005.
 - Developer role: accounts with the `developer` custom claim are admins without being in `ADMIN_EMAILS`. `npm run developer -- <email>` creates or resets one with a random password and signs out its old sessions.
 - Admin dashboard Health card: rate-limit blocks, Turnstile failures and honeypot hits counted per day in Upstash (last 7 days vs the 7 before), and today's sign-in emails against each provider's free daily cap. Sample numbers in Demo Mode. The unused `/api/admin/stats` route is removed.
 - Admin metrics dashboard, part 2: visitors and sessions chart with bounce rate and average session tiles, the signing funnel with step conversion, referrer, country, device and share-channel breakdowns, and a campaign comparison table in the All campaigns view. The old 7-day traffic cards are replaced.

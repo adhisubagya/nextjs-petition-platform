@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 const admin = vi.hoisted(() => ({ ok: true }));
-vi.mock("@/lib/server/admin-auth", () => ({ isAdmin: async () => admin.ok }));
+vi.mock("@/lib/server/admin-auth", () => ({
+  isAdmin: async () => admin.ok,
+  guard: async () => (admin.ok ? null : Response.json({ error: "Unauthorized" }, { status: 401 })),
+}));
 vi.mock("@/lib/firebase/admin", () => ({
   adminDb: () => {
     throw new Error("Demo Mode must not touch Firestore");
