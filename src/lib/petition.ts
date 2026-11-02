@@ -1,7 +1,7 @@
 import "server-only";
 import type { DocumentData, DocumentSnapshot, Timestamp } from "firebase-admin/firestore";
 import { seedCampaigns, seedComments, seedPetition } from "@/data/seed";
-import type { Campaign, RichTextNode } from "@/lib/campaign";
+import { campaignPhase, type Campaign, type CampaignSummary, type RichTextNode } from "@/lib/campaign";
 import { adminDb, isFirebaseAdminConfigured, petitionId } from "@/lib/firebase/admin";
 import type { Comment, Petition } from "@/lib/types";
 
@@ -66,6 +66,42 @@ export async function getCampaign(slug: string): Promise<Campaign | null> {
   }
   const doc = await adminDb().collection("petitions").doc(slug).get();
   return doc.exists ? toCampaign(slug, doc.data()!) : null;
+}
+
+export const CAMPAIGN_PAGE_SIZE = 12;
+export type CampaignPage = { campaigns: CampaignSummary[]; nextCursor: string | null };
+
+// List payloads skip the rich description; cards only need the plain-text excerpt.
+function summary(c: Campaign): CampaignSummary {
+  const s: Partial<Campaign> = { ...c, descriptionText: c.descriptionText.slice(0, 240) };
+  delete s.description;
+  return s as CampaignSummary;
+}
+
+// shortcut: reads the whole collection and filters in memory, so no composite index or field backfill is needed
+// and pre-campaign docs still show. Fine for tens of campaigns (hourly ISR); switch to an indexed query past a few hundred.
+async function visibleCampaigns(): Promise<Campaign[]> {
+  const all = isFirebaseAdminConfigured
+    ? (await adminDb().collection("petitions").get()).docs.map((d) => toCampaign(d.id, d.data()))
+    : fallbackCampaigns;
+  return all.filter((c) => campaignPhase(c) !== "draft").sort((a, b) => b.startAt.localeCompare(a.startAt));
+}
+
+/** Public campaigns, newest start first. The cursor is the last slug of the previous page. */
+export async function listCampaigns(after: string | null = null): Promise<CampaignPage> {
+  const all = await visibleCampaigns();
+  const start = after ? all.findIndex((c) => c.slug === after) + 1 : 0;
+  const page = all.slice(start, start + CAMPAIGN_PAGE_SIZE);
+  return { campaigns: page.map(summary), nextCursor: start + CAMPAIGN_PAGE_SIZE < all.length ? page.at(-1)!.slug : null };
+}
+
+/** The featured campaign (at most one is flagged) and the newest one that is live right now. */
+export async function getHighlights(now = Date.now()): Promise<{ featured: Campaign | null; newestLive: Campaign | null }> {
+  const all = await visibleCampaigns();
+  return {
+    featured: all.find((c) => c.featured) ?? null,
+    newestLive: all.find((c) => campaignPhase(c, now) === "live") ?? null,
+  };
 }
 
 export async function getPetition(): Promise<Petition> {
