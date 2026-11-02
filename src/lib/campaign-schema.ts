@@ -88,6 +88,15 @@ const milestone = z.object({
 // Wall-clock time in the campaign's zone, e.g. "2026-11-10T19:00".
 const localDateTime = z.iso.datetime({ local: true });
 
+// Zod 4 runs object refinements even when a field already failed, so malformed dates must not throw here.
+function endAfterStart(start: string, end: string, timeZone: string) {
+  try {
+    return wallClockToUtc(end, timeZone) > wallClockToUtc(start, timeZone);
+  } catch {
+    return true; // the field's own issue already reports it
+  }
+}
+
 export const campaignInputSchema = z
   .object({
     slug: slugSchema,
@@ -101,7 +110,7 @@ export const campaignInputSchema = z
     timeZone: z.string().refine(isIanaZone, "Unknown time zone"),
     status: z.enum(["draft", "published"]).default("draft"),
   })
-  .refine((v) => v.end === null || wallClockToUtc(v.end, v.timeZone) > wallClockToUtc(v.start, v.timeZone), {
+  .refine((v) => v.end === null || endAfterStart(v.start, v.end, v.timeZone), {
     path: ["end"],
     message: "End must be after start",
   })
