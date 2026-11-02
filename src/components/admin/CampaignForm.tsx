@@ -1,22 +1,31 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { Plus, Sparkles, X } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useForm, type FieldErrors, type Resolver } from "react-hook-form";
+import { Controller, useFieldArray, useForm, type FieldErrors, type Resolver } from "react-hook-form";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
 import { adminApi } from "@/lib/admin-api";
-import type { Campaign } from "@/lib/campaign";
+import { RichText } from "@/components/RichText";
+import { milestoneLadder, MILESTONES_MAX, type Campaign } from "@/lib/campaign";
 import { fieldFor, slugify, soon, toFormValues, toInput, type CampaignFormValues } from "@/lib/campaign-form";
 import { campaignInputSchema } from "@/lib/campaign-schema";
 import { DEMO_DISABLED_MESSAGE, DEMO_MODE } from "@/lib/demo";
 import { useAdminSession } from "./AdminGate";
 
 type Values = CampaignFormValues;
+
+// The editor (ProseMirror) loads only when the form opens.
+const RichTextEditor = dynamic(() => import("./RichTextEditor").then((m) => m.RichTextEditor), {
+  ssr: false,
+  loading: () => <div className="min-h-60 rounded-md border border-input" aria-hidden />,
+});
 
 // The same schema as the API, applied to the mapped values; issues land on the field that shows them.
 const resolver: Resolver<Values> = async (values) => {
@@ -40,10 +49,12 @@ export function CampaignForm({ campaign }: { campaign: Campaign | null }) {
   const editing = campaign !== null;
   const [slugTouched, setSlugTouched] = useState(editing);
   const zones = useMemo(() => Intl.supportedValuesOf("timeZone"), []);
-  const { register, handleSubmit, watch, setValue, formState } = useForm<Values>({
+  const [preview, setPreview] = useState(false);
+  const { register, handleSubmit, watch, setValue, control, formState } = useForm<Values>({
     resolver,
     defaultValues: toFormValues(campaign, browserZone()),
   });
+  const milestones = useFieldArray({ control, name: "milestones" });
   const { errors, isSubmitting } = formState;
   const indefinitely = watch("indefinitely");
 
@@ -108,6 +119,77 @@ export function CampaignForm({ campaign }: { campaign: Campaign | null }) {
             <Label htmlFor="goal">Signature goal</Label>
             <Input id="goal" type="number" min={1} inputMode="numeric" {...aria("goal")} {...register("goal", { valueAsNumber: true })} />
             {error("goal")}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl">
+        <CardHeader>
+          <CardTitle id="description-label">Description</CardTitle>
+          <CardDescription>Headings, emphasis, lists, quotes and links. Shown below the progress bar on the campaign page.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3">
+          <Controller
+            control={control}
+            name="description"
+            render={({ field }) => (
+              <RichTextEditor value={field.value} onChange={field.onChange} invalid={Boolean(errors.description)} labelledBy="description-label" />
+            )}
+          />
+          {error("description")}
+          <Button variant="outline" size="sm" className="w-fit" aria-expanded={preview} onClick={() => setPreview((p) => !p)}>
+            {preview ? "Hide preview" : "Preview"}
+          </Button>
+          {preview && (
+            <div className="rounded-md border border-dashed p-4">
+              <RichText doc={watch("description")} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl">
+        <CardHeader>
+          <CardTitle>Milestones</CardTitle>
+          <CardDescription>Signature counts marked on the progress bar, lowest first, each at most the goal (up to {MILESTONES_MAX}).</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3">
+          {milestones.fields.length > 0 && (
+            <ol className="grid gap-2">
+              {milestones.fields.map((f, i) => (
+                <li key={f.id} className="flex gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    aria-label={`Milestone ${i + 1} signatures`}
+                    className="w-32"
+                    {...register(`milestones.${i}.count`, { valueAsNumber: true })}
+                  />
+                  <Input aria-label={`Milestone ${i + 1} label`} placeholder="Label (optional)" {...register(`milestones.${i}.label`)} />
+                  <Button variant="ghost" size="icon" aria-label={`Remove milestone ${i + 1}`} onClick={() => milestones.remove(i)}>
+                    <X aria-hidden />
+                  </Button>
+                </li>
+              ))}
+            </ol>
+          )}
+          {error("milestones")}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={milestones.fields.length >= MILESTONES_MAX}
+              onClick={() => {
+                const last = watch("milestones").at(-1)?.count ?? 0;
+                milestones.append({ count: Math.min(last + 100, watch("goal") || last + 100), label: "" });
+              }}
+            >
+              <Plus aria-hidden /> Add milestone
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => milestones.replace(milestoneLadder(watch("goal") || 0))}>
+              <Sparkles aria-hidden /> Generate up to goal
+            </Button>
           </div>
         </CardContent>
       </Card>
