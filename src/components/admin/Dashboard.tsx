@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { BarChart3, PenLine, Pin, PinOff, Users } from "lucide-react";
+import { Pin, PinOff } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +11,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input, Label } from "@/components/ui/input";
 import { adminApi } from "@/lib/admin-api";
 import { DEMO_DISABLED_MESSAGE, DEMO_MODE } from "@/lib/demo";
-import { percent } from "@/lib/format";
 import type { CommentPage } from "@/lib/petition";
 import type { Stats } from "@/lib/server/posthog";
 import type { Petition } from "@/lib/types";
 import { useAdminSession } from "./AdminGate";
 import { AdminShell } from "./AdminShell";
+import { Metrics } from "./metrics/Metrics";
 
 export function Dashboard({ petition }: { petition: Petition }) {
   const session = useAdminSession();
@@ -43,16 +43,7 @@ export function Dashboard({ petition }: { petition: Petition }) {
 
   return (
     <AdminShell email={session.email} title="Dashboard">
-      <section aria-label="Traffic, last 7 days" className="grid gap-4 sm:grid-cols-3 md:gap-6">
-        <Metric icon={<BarChart3 />} label="Page views (7d)" value={stats.data?.pageviews} />
-        <Metric icon={<Users />} label="Visitors (7d)" value={stats.data?.visitors} />
-        <Metric
-          icon={<PenLine />}
-          label="Signatures"
-          value={petition.signatureCount}
-          note={`${percent(petition.signatureCount, petition.goal)}% of goal`}
-        />
-      </section>
+      <Metrics />
 
       <div className="grid gap-4 md:gap-6 xl:grid-cols-[1fr_360px]">
         <Card className="rounded-2xl">
@@ -156,20 +147,5 @@ export function Dashboard({ petition }: { petition: Petition }) {
         </div>
       </Card>
     </AdminShell>
-  );
-}
-
-function Metric({ icon, label, value, note }: { icon: React.ReactNode; label: string; value?: number; note?: string }) {
-  return (
-    <div className="rounded-2xl border bg-card p-5 md:p-6">
-      <div className="flex size-12 items-center justify-center rounded-xl bg-muted [&_svg]:size-6" aria-hidden>
-        {icon}
-      </div>
-      <p className="mt-5 text-sm text-muted-foreground">{label}</p>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <p className="text-3xl font-bold tracking-tight tabular-nums">{value === undefined ? "…" : value.toLocaleString("en-US")}</p>
-        {note && <Badge>{note}</Badge>}
-      </div>
-    </div>
   );
 }
