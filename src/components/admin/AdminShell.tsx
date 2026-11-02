@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, LayoutDashboard, ListChecks, LogOut, Megaphone } from "lucide-react";
+import { ExternalLink, LayoutDashboard, ListChecks, LogOut, Megaphone, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/lib/admin-session";
 import { DEMO_MODE } from "@/lib/demo";
+import { useAdminSettings } from "./AdminGate";
 
 const navItem = "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors [&_svg]:size-4";
 
@@ -21,6 +22,8 @@ type Props = { email: string; title: string; children: React.ReactNode };
 
 export function AdminShell({ email, title, children }: Props) {
   const path = usePathname();
+  const { developer } = useAdminSettings();
+  const nav = developer ? [...NAV, { href: "/admin/developer", label: "Developer", icon: SlidersHorizontal }] : NAV;
   return (
     <div className="flex min-h-screen bg-muted/30">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-background px-4 py-6 lg:flex">
@@ -32,7 +35,7 @@ export function AdminShell({ email, title, children }: Props) {
         </Link>
         <p className="mt-8 px-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">Menu</p>
         <nav className="mt-2 space-y-1">
-          {NAV.map(({ href, label, icon: Icon }) => {
+          {nav.map(({ href, label, icon: Icon }) => {
             const active = href === "/admin" ? path === href : path.startsWith(href);
             return (
               <Link
@@ -62,7 +65,7 @@ export function AdminShell({ email, title, children }: Props) {
             <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
             {DEMO_MODE && <Badge className="hidden sm:inline-flex">Demo Mode</Badge>}
             <nav className="flex gap-1 lg:hidden" aria-label="Admin sections">
-              {NAV.map(({ href, label, icon: Icon }) => (
+              {nav.map(({ href, label, icon: Icon }) => (
                 <Link key={href} href={href} aria-label={label} className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground [&_svg]:size-4">
                   <Icon aria-hidden />
                 </Link>

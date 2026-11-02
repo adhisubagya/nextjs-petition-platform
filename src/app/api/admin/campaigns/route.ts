@@ -5,7 +5,7 @@ import { campaignInputSchema } from "@/lib/campaign-schema";
 import { DEMO_DISABLED_MESSAGE, DEMO_MODE } from "@/lib/demo";
 import { adminDb, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { toCampaign } from "@/lib/petition";
-import { isAdmin } from "@/lib/server/admin-auth";
+import { guard, isAdmin } from "@/lib/server/admin-auth";
 import { inputToDoc } from "@/lib/server/campaign-store";
 import { seedCampaigns } from "@/data/seed";
 
@@ -21,7 +21,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  if (!(await isAdmin(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const denied = await guard(req, "create");
+  if (denied) return denied;
   if (DEMO_MODE) return NextResponse.json({ error: DEMO_DISABLED_MESSAGE }, { status: 403 });
   const parsed = campaignInputSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid campaign", issues: parsed.error.flatten().fieldErrors }, { status: 400 });

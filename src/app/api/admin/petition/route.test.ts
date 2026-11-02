@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/server/admin-auth", () => ({ isAdmin: async () => true }));
+vi.mock("@/lib/server/admin-auth", () => ({ isAdmin: async () => true, guard: async () => null }));
 vi.mock("@/lib/firebase/admin", () => ({
   adminDb: () => {
     throw new Error("Demo Mode must not touch Firestore");

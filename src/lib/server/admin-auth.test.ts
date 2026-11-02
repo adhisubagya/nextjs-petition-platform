@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const verifyIdToken = vi.fn();
 vi.mock("firebase-admin/auth", () => ({ getAuth: () => ({ verifyIdToken }) }));
 vi.mock("@/lib/firebase/admin", () => ({ isFirebaseAdminConfigured: true, adminDb: () => ({}) }));
+const settings = vi.hoisted(() => ({ mode: "multiple", disabled: ["metrics"] }));
+vi.mock("./settings", () => ({ getSettings: async () => settings }));
 vi.stubEnv("ADMIN_EMAILS", "admin@demo.com, owner@example.com");
 
-const { isAdmin, isDeveloper } = await import("./admin-auth");
+const { guard, isAdmin, isDeveloper } = await import("./admin-auth");
 const req = (token?: string) => new Request("http://x", { headers: token ? { authorization: `Bearer ${token}` } : {} });
 
 describe("isAdmin", () => {
@@ -37,5 +39,14 @@ describe("isAdmin", () => {
     verifyIdToken.mockResolvedValue({ email: "owner@example.com", developer: "true" });
     expect(await isAdmin(req("t"))).toBe(true);
     expect(await isDeveloper(req("t"))).toBe(false);
+  });
+  it("guard: 401 for strangers, 403 for a switched-off capability, developers pass", async () => {
+    verifyIdToken.mockResolvedValue({ email: "stranger@example.com" });
+    expect((await guard(req("t"), "metrics"))?.status).toBe(401);
+    verifyIdToken.mockResolvedValue({ email: "owner@example.com" });
+    expect((await guard(req("t"), "metrics"))?.status).toBe(403);
+    expect(await guard(req("t"), "edit")).toBeNull();
+    verifyIdToken.mockResolvedValue({ email: "dev@example.com", developer: true });
+    expect(await guard(req("t"), "metrics")).toBeNull();
   });
 });
