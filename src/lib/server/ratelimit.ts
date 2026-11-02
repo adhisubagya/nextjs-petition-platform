@@ -1,6 +1,7 @@
 import "server-only";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { countMetric } from "@/lib/server/health";
 
 const redis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN ? Redis.fromEnv() : null;
@@ -8,7 +9,12 @@ const redis =
 function limiter(tokens: number, window: Parameters<typeof Ratelimit.slidingWindow>[1], prefix: string) {
   const rl = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(tokens, window), prefix }) : null;
   // shortcut: without Upstash credentials there is no limit; set them for any public deployment.
-  return async (key: string): Promise<boolean> => (rl ? (await rl.limit(key)).success : true);
+  return async (key: string): Promise<boolean> => {
+    if (!rl) return true;
+    const { success } = await rl.limit(key);
+    if (!success) countMetric("ratelimit");
+    return success;
+  };
 }
 
 export const allowComment = limiter(3, "1 m", "rl:comments");

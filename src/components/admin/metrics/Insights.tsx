@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { deltaText, ratio, seriesRows } from "@/lib/metrics/chart";
+import { delta } from "@/lib/metrics/range";
 import type { Summary } from "@/lib/metrics/summary";
+import type { Health } from "@/lib/server/health";
 
 // Traffic, funnel, breakdowns and the all-campaigns comparison: the lower half of the metrics dashboard.
 
@@ -219,6 +221,48 @@ function Comparison({ rows, onPick }: { rows: Summary["comparison"]; onPick: (sl
           </tbody>
         </table>
       </div>
+    </Card>
+  );
+}
+
+/** Abuse counters (last 7 days vs the 7 before) and today's email quota per provider. Not tied to the range filter. */
+export function HealthCard({ h }: { h: Health & { sample: boolean } }) {
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader>
+        <CardTitle>Health</CardTitle>
+        <CardDescription>Blocked requests in the last 7 days, and sign-in emails sent today (UTC) against each provider&apos;s free daily cap.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-6 md:grid-cols-2">
+        <dl className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 text-sm tabular-nums">
+          {h.counters.map((c) => (
+            <div key={c.name} className="contents">
+              <dt className="text-muted-foreground">{c.label}</dt>
+              <dd className="text-right font-medium">{fmt(c.current)}</dd>
+              <dd className="text-right text-xs text-muted-foreground">{deltaText(delta(c.current, c.previous))?.text ?? "–"} vs previous</dd>
+            </div>
+          ))}
+        </dl>
+        <ul className="space-y-3 text-sm">
+          {h.providers.map((p) => {
+            const share = p.cap > 0 ? p.used / p.cap : 0;
+            return (
+              <li key={p.name}>
+                <div className="flex justify-between gap-2">
+                  <span className="capitalize">{p.name}</span>
+                  <span className="text-muted-foreground tabular-nums">
+                    {p.configured ? `${fmt(p.used)} / ${fmt(p.cap)}` : "Not configured"}
+                    {p.configured && share >= 0.8 && <span className="ml-2 font-medium text-foreground">Near cap</span>}
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-[var(--chart-1)]" style={{ width: `${Math.min(100, share * 100)}%` }} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
     </Card>
   );
 }

@@ -16,7 +16,8 @@ import { DEFAULT_RANGE, parseRange, RANGE_LABEL, RANGES, type Range } from "@/li
 import type { Summary } from "@/lib/metrics/summary";
 import { cn } from "@/lib/utils";
 import { useAdminSession } from "../AdminGate";
-import { Insights } from "./Insights";
+import { HealthCard, Insights } from "./Insights";
+import type { Health } from "@/lib/server/health";
 
 const SignaturesChart = dynamic(() => import("./SignaturesChart"), {
   ssr: false,
@@ -65,6 +66,7 @@ export function Metrics() {
     placeholderData: keepPreviousData,
   });
   const d = q.data;
+  const health = useQuery({ queryKey: ["admin-health"], queryFn: () => adminApi<Health & { sample: boolean }>(session, "/api/admin/health") });
   const rows: Row[] = d ? seriesRows(d.signatures, d.starts, d.unit, d.timeZone, cumulative) : [];
   const v = d?.traffic.visitors;
   const conv = d && v ? ratio(d.signatures.current, v.current) : null;
@@ -151,6 +153,7 @@ export function Metrics() {
         {d?.campaign && <PaceCard c={d.campaign} />}
       </div>
       {d && <Insights d={d} onPick={(slug) => pick({ campaign: slug })} />}
+      {health.data && <HealthCard h={health.data} />}
     </section>
   );
 }
