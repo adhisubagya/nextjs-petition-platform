@@ -1,3 +1,5 @@
+import { milestoneLadder, type Campaign, type RichTextNode } from "@/lib/campaign";
+import { docToText } from "@/lib/campaign-schema";
 import type { Comment, Petition } from "@/lib/types";
 
 export const seedPetition: Omit<Petition, "id"> = {
@@ -37,5 +39,66 @@ export function seedComments(now = Date.now()): Omit<Comment, "id">[] {
     avatarUrl: null,
     pinned,
     createdAt: new Date(now - hoursAgo * 3_600_000).toISOString(),
+  }));
+}
+
+const DAY = 86_400_000;
+const text = (t: string) => ({ type: "text", text: t });
+const paragraph = (t: string) => ({ type: "paragraph", content: [text(t)] });
+
+const description: RichTextNode = {
+  type: "doc",
+  content: [
+    paragraph("A short summary of what this campaign asks for, who it affects and why it matters."),
+    { type: "heading", attrs: { level: 2 }, content: [text("What we are asking for")] },
+    {
+      type: "bulletList",
+      content: ["First concrete ask", "Second concrete ask", "A date by which we expect an answer"].map((t) => ({
+        type: "listItem",
+        content: [paragraph(t)],
+      })),
+    },
+    {
+      type: "paragraph",
+      content: [
+        text("Replace this text with your own campaign copy. "),
+        { type: "text", text: "Read the background", marks: [{ type: "link", attrs: { href: "https://example.com" } }] },
+        text("."),
+      ],
+    },
+  ],
+};
+
+// [slug, title, subtitle, goal, count, start (days from now), end (days from now | null), featured, goal reached (days from now | null)]
+type Row = [string, string, string, number, number, number, number | null, boolean, number | null];
+const campaignRows: Row[] = [
+  ["default", "Campaign Title", "One sentence on the change this campaign asks for.", 10000, 8452, -21, 30, true, null],
+  ["achieved-campaign", "Achieved Campaign Title", "Past its goal and still collecting signatures.", 10000, 10842, -40, 14, false, -3],
+  ["scheduled-campaign", "Scheduled Campaign Title", "Opens for signatures in a few days.", 5000, 0, 3, 40, false, null],
+  ["ended-achieved-campaign", "Ended Campaign Title", "Closed after reaching its goal.", 5000, 5310, -90, -10, false, -25],
+  ["closed-campaign", "Closed Campaign Title", "Closed before reaching its goal.", 3000, 1204, -120, -60, false, null],
+];
+
+/** Five campaigns covering every public state: live (featured), live + achieved, scheduled, ended + achieved, ended. */
+export function seedCampaigns(now = Date.now()): Campaign[] {
+  const iso = (days: number) => new Date(now + days * DAY).toISOString();
+  return campaignRows.map(([slug, title, subtitle, goal, signatureCount, start, end, featured, reached]) => ({
+    slug,
+    title,
+    subtitle,
+    description,
+    descriptionText: docToText(description),
+    goal,
+    milestones: milestoneLadder(goal),
+    startAt: iso(start),
+    endAt: end === null ? null : iso(end),
+    timeZone: "Asia/Jakarta",
+    status: "published",
+    featured,
+    signatureCount,
+    goalReachedAt: reached === null ? null : iso(reached),
+    deletedAt: null,
+    createdAt: iso(start - 7),
+    updatedAt: iso(start - 7),
   }));
 }
