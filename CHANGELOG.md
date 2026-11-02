@@ -23,6 +23,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Metrics API at /api/admin/metrics (campaign or All campaigns, any range): signatures, traffic, funnel, breakdowns, pace and a campaign comparison from the daily rollups, cached 10 minutes. Demo Mode serves deterministic sample rollups that end at each campaign's real count.
 - Nightly rollup at /api/cron/rollup (Vercel Cron, 00:30 UTC): copies PostHog page views, visitors, sessions, bounces, session time, funnel steps and the top referrers, countries, devices and share channels into each campaign's daily docs. Requires CRON_SECRET, is idempotent, never touches signature counts, and backfills up to a year a few chunks per run.
 - Dashboard range model: 24h, 3D, 7D, 30D, 3M, 6M, 1Y and All with buckets in the campaign time zone (weeks from Monday), a previous period of equal length, and deltas that leave out the partial current bucket.
 - Analytics events for the dashboard funnel: sign_started, code_sent, code_verified, signed and share_clicked (whatsapp, x, copy, native), each with the campaign slug and no personal data; nothing is sent when PostHog is not configured.
