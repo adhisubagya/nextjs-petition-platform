@@ -180,7 +180,7 @@ These bring in Radix and `react-day-picker`, ending ADR 0002's "no Radix" rule. 
 
 ### 2.11 Demo Mode
 
-- Seed data has 6 campaigns covering every state (featured flag on one; one live, one live + achieved past 100%, one scheduled, one ended + achieved, one ended + closed) so the landing page and badges are all visible.
+- Seed data has 5 campaigns covering every state (featured flag on one; one live, one live + achieved past 100%, one scheduled, one ended + achieved, one ended + closed) so the landing page and badges are all visible.
 - All admin forms and dialogs work up to the final action, which shows the Demo Mode toast; APIs return 403 before touching Firestore.
 
 ## 3. Dashboard metrics
@@ -279,7 +279,7 @@ Ordered; each row is one PR (≤ ~400 lines).
 | # | Task | Tier |
 |---|---|---|
 | 1 | ADR 0004 (multi-campaign, Radix/Recharts/Tiptap in admin, landing page cache), `components.json`, chart tokens | S |
-| 2 | Campaign type, Zod schema (incl. Tiptap doc schema), `campaignPhase()`, wall-clock ↔ UTC helpers, milestone ladder generator, all with tests; seed with 6 campaigns | M |
+| 2 | Campaign type, Zod schema (incl. Tiptap doc schema), `campaignPhase()`, wall-clock ↔ UTC helpers, milestone ladder generator, all with tests; seed with 5 campaigns | M |
 | 3 | `/c/[slug]` page: server-rendered rich description, phase banner + countdown, Achieved badge (live or ended), dimmed Ended state, progress past 100%, milestone ticks | M |
 | 4 | Signing enforces the Live window (not the goal), sets `goalReachedAt` once, writes hourly rollup (transaction + tests) | M |
 | 5 | Landing page `/`: featured, newest live, paginated list, index, `revalidate = 3600` | M |
