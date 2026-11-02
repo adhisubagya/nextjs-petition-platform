@@ -1,5 +1,6 @@
 import "server-only";
 import { DEMO_MODE } from "@/lib/demo";
+import { countMetric } from "@/lib/server/health";
 
 // Cloudflare's published test secrets (always pass / always fail / token spent).
 export const isTestSecret = (secret: string) => /^[123]x0{20,}/.test(secret);
@@ -18,5 +19,6 @@ export async function verifyTurnstile(token: string, ip: string, demo = DEMO_MOD
   });
   if (!res.ok) return false;
   const data = (await res.json()) as { success: boolean };
+  if (!data.success) countMetric("turnstile");
   return data.success;
 }

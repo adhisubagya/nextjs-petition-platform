@@ -8,6 +8,7 @@ import { getCampaign, getComments, toCampaign } from "@/lib/petition";
 import { commentRequestSchema } from "@/lib/schemas";
 import { allowComment, allowCommentRead } from "@/lib/server/ratelimit";
 import { signerUid } from "@/lib/server/signer-auth";
+import { countMetric } from "@/lib/server/health";
 import { verifyTurnstile } from "@/lib/server/turnstile";
 import type { Comment } from "@/lib/types";
 
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
   // Honeypot filled: answer like a success so the bot learns nothing, and write nothing.
   // Demo Mode: behave exactly like a successful write, but never write to Firestore.
   // Both still follow the real signing window; live mode checks it inside the transaction instead.
+  if (website) countMetric("honeypot");
   if (website || DEMO_MODE) {
     const campaign = await getCampaign(slug.data);
     if (!campaign) return NextResponse.json({ error: "Campaign not found" }, { status: 404 });

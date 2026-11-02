@@ -66,7 +66,7 @@ export const PROVIDERS: Provider[] = [
 
 const COUNTER_TTL = 48 * 3600;
 // Free quotas reset daily; counting by UTC day is close enough with the 5% margin.
-const counterKey = (name: string, now: Date) => `mail:${name}:${now.toISOString().slice(0, 10)}`;
+export const quotaKey = (name: string, now: Date) => `mail:${name}:${now.toISOString().slice(0, 10)}`;
 
 /** The address itself was refused: another provider would refuse it too, so don't fall through. */
 export class EmailRejectedError extends Error {}
@@ -84,7 +84,7 @@ export async function sendEmail(mail: Mail, deps: Deps = {}): Promise<string> {
 
   for (const p of PROVIDERS) {
     if (!p.configured(env)) continue;
-    const key = counterKey(p.name, now);
+    const key = quotaKey(p.name, now);
     const limit = Math.floor(p.dailyCap * 0.95);
     if (Number((await store.get(key)) ?? 0) >= limit) continue;
 
