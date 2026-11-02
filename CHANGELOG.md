@@ -23,6 +23,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Confirm dialogs: publishing a draft, moving the start of a live campaign (says whether signing closes until then), and deleting a campaign, which needs its link typed in; in Demo Mode the dialogs work and the final button shows the Demo Mode message.
 - Campaign form: Tiptap rich text description (headings, emphasis, lists, quotes, safe links only) with a preview rendered by the public renderer, and milestone rows with add, remove and Generate up to goal; the editor loads only in the admin form.
 - Campaign form (new and edit): title with auto link, subtitle, goal, time zone picker from the browser's zone list, start and end date and time read in that zone, Today and Indefinitely, draft or published; validated with the same schema as the API, and stopped with the Demo Mode message after validation.
 - Admin Campaigns page: every campaign with phase, Achieved and Featured badges, signatures against goal and start time in its zone; feature, delete and restore (Deleted filter); admin pages share one sign-in gate and get a section menu on mobile.

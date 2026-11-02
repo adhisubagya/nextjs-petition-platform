@@ -17,7 +17,9 @@ import { milestoneLadder, MILESTONES_MAX, type Campaign } from "@/lib/campaign";
 import { fieldFor, slugify, soon, toFormValues, toInput, type CampaignFormValues } from "@/lib/campaign-form";
 import { campaignInputSchema } from "@/lib/campaign-schema";
 import { DEMO_DISABLED_MESSAGE, DEMO_MODE } from "@/lib/demo";
+import { confirmationsFor } from "@/lib/campaign-confirm";
 import { useAdminSession } from "./AdminGate";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 type Values = CampaignFormValues;
 
@@ -50,6 +52,7 @@ export function CampaignForm({ campaign }: { campaign: Campaign | null }) {
   const [slugTouched, setSlugTouched] = useState(editing);
   const zones = useMemo(() => Intl.supportedValuesOf("timeZone"), []);
   const [preview, setPreview] = useState(false);
+  const [pending, setPending] = useState<{ values: Values; reasons: string[] } | null>(null);
   const { register, handleSubmit, watch, setValue, control, formState } = useForm<Values>({
     resolver,
     defaultValues: toFormValues(campaign, browserZone()),
@@ -58,8 +61,16 @@ export function CampaignForm({ campaign }: { campaign: Campaign | null }) {
   const { errors, isSubmitting } = formState;
   const indefinitely = watch("indefinitely");
 
-  async function onSubmit(values: Values) {
-    // Demo Mode: the form validates like the real thing, then stops before the API.
+  // Publishing, or moving a live campaign's start, waits for a confirm dialog first.
+  function onSubmit(values: Values) {
+    const reasons = confirmationsFor(campaign, values);
+    if (reasons.length) setPending({ values, reasons });
+    else return save(values);
+  }
+
+  async function save(values: Values) {
+    setPending(null);
+    // Demo Mode: the form and dialogs work like the real thing, then stop before the API.
     if (DEMO_MODE) return void toast(DEMO_DISABLED_MESSAGE);
     try {
       const path = editing ? `/api/admin/campaigns/${campaign.slug}` : "/api/admin/campaigns";
@@ -257,6 +268,16 @@ export function CampaignForm({ campaign }: { campaign: Campaign | null }) {
           ))}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={pending !== null}
+        title={campaign?.status === "published" ? "Change the start of a live campaign?" : "Publish this campaign?"}
+        confirmLabel={pending?.values.status === "published" && campaign?.status !== "published" ? "Publish" : "Save changes"}
+        onConfirm={() => pending && save(pending.values)}
+        onCancel={() => setPending(null)}
+      >
+        {pending?.reasons.map((r) => <p key={r}>{r}</p>)}
+      </ConfirmDialog>
 
       <div className="flex gap-2">
         <Button type="submit" disabled={isSubmitting}>

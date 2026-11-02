@@ -15,6 +15,7 @@ import { formatInZone } from "@/lib/use-phase";
 import { cn } from "@/lib/utils";
 import { useAdminSession } from "./AdminGate";
 import { AdminShell } from "./AdminShell";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 const PHASE: Record<Phase, string> = { draft: "Draft", scheduled: "Scheduled", live: "Live", ended: "Ended" };
 
@@ -22,6 +23,7 @@ export function CampaignsAdmin() {
   const session = useAdminSession();
   const qc = useQueryClient();
   const [showDeleted, setShowDeleted] = useState(false);
+  const [deleting, setDeleting] = useState<Campaign | null>(null);
   const { data, isError, isPending } = useQuery({
     queryKey: ["admin-campaigns"],
     queryFn: () => adminApi<{ campaigns: Campaign[] }>(session, "/api/admin/campaigns"),
@@ -57,6 +59,24 @@ export function CampaignsAdmin() {
           </Button>
         ))}
       </div>
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete this campaign?"
+        confirmLabel="Delete"
+        destructive
+        typeToConfirm={deleting?.slug}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => {
+          const c = deleting!;
+          setDeleting(null);
+          void change(c.slug, { deleted: true }, "Deleted. Restore it from the Deleted filter.");
+        }}
+      >
+        <p>
+          <span className="text-foreground">{deleting?.title}</span> disappears from the site and signing stops. Comments and
+          signatures are kept, the link stays reserved, and you can restore it from the Deleted filter.
+        </p>
+      </ConfirmDialog>
       <Card className="overflow-hidden rounded-2xl">
         <div className="relative overflow-x-auto">
           <table className="w-full text-sm">
@@ -123,7 +143,7 @@ export function CampaignsAdmin() {
                             >
                               <Star aria-hidden className={cn(c.featured && "fill-current")} />
                             </Button>
-                            <Button variant="outline" size="icon" aria-label={`Delete ${c.title}`} onClick={() => change(c.slug, { deleted: true }, "Deleted. Restore it from the Deleted filter.")}>
+                            <Button variant="outline" size="icon" aria-label={`Delete ${c.title}`} onClick={() => setDeleting(c)}>
                               <Trash2 aria-hidden />
                             </Button>
                           </>
