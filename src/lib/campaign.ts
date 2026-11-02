@@ -33,6 +33,8 @@ export type Campaign = {
   updatedAt: string;
 };
 
+export type CampaignSummary = Omit<Campaign, "description">;
+
 export type Phase = "draft" | "scheduled" | "live" | "ended";
 
 type PhaseFields = Pick<Campaign, "status" | "startAt" | "endAt" | "deletedAt">;

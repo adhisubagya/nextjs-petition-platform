@@ -22,6 +22,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Landing page `/` lists campaigns: featured, newest live, then every public campaign newest first with pagination (`/api/campaigns`, edge-cached for an hour); regenerated hourly. Needs the new `status + deletedAt + startAt` Firestore index.
 - Campaign page at `/c/[slug]`: rich description rendered on the server, phase badge with countdown and campaign time zone, Achieved badge, closed state with the sign form replaced, progress past 100% and milestone ticks; drafts and deleted campaigns are 404. `/` shows the default campaign the same way for now.
 - Campaign model: Zod schema with a StarterKit-only rich text check (safe links, size and depth caps), derived phases (draft, scheduled, live, ended), wall-clock ↔ UTC conversion per IANA time zone, a suggested milestone ladder, and five seed campaigns covering every state.
 - Hold to sign: the Sign button is now a press-and-hold "Leaving Thumbprint" button whose thumbprint fills in while held (mouse, touch, or holding Space/Enter); releasing early cancels, and reduced-motion users get a stepped fill.
