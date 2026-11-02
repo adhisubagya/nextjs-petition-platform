@@ -9,27 +9,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
-import type { Session } from "@/lib/admin-session";
+import { adminApi } from "@/lib/admin-api";
 import { DEMO_DISABLED_MESSAGE, DEMO_MODE } from "@/lib/demo";
 import { percent } from "@/lib/format";
 import type { CommentPage } from "@/lib/petition";
 import type { Stats } from "@/lib/server/posthog";
 import type { Petition } from "@/lib/types";
+import { useAdminSession } from "./AdminGate";
 import { AdminShell } from "./AdminShell";
 
-export function Dashboard({ session, petition }: { session: Session; petition: Petition }) {
+export function Dashboard({ petition }: { petition: Petition }) {
+  const session = useAdminSession();
   const qc = useQueryClient();
   const [goal, setGoal] = useState(petition.goal);
 
-  async function api<T>(path: string, init?: RequestInit): Promise<T> {
-    const token = await session.token();
-    const res = await fetch(path, {
-      ...init,
-      headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
-    });
-    if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Request failed");
-    return res.json();
-  }
+  const api = <T,>(path: string, init?: RequestInit) => adminApi<T>(session, path, init);
 
   const stats = useQuery({ queryKey: ["admin-stats"], queryFn: () => api<Stats>("/api/admin/stats") });
   const comments = useQuery({ queryKey: ["admin-comments"], queryFn: () => api<CommentPage>("/api/comments") });
@@ -48,7 +42,7 @@ export function Dashboard({ session, petition }: { session: Session; petition: P
   }
 
   return (
-    <AdminShell email={session.email}>
+    <AdminShell email={session.email} title="Dashboard">
       <section aria-label="Traffic, last 7 days" className="grid gap-4 sm:grid-cols-3 md:gap-6">
         <Metric icon={<BarChart3 />} label="Page views (7d)" value={stats.data?.pageviews} />
         <Metric icon={<Users />} label="Visitors (7d)" value={stats.data?.visitors} />

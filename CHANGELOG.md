@@ -23,6 +23,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Admin Campaigns page: every campaign with phase, Achieved and Featured badges, signatures against goal and start time in its zone; feature, delete and restore (Deleted filter); admin pages share one sign-in gate and get a section menu on mobile.
 - Admin campaign API: list all campaigns (drafts and deleted included), create (slug reserved forever), full edit with `goalReachedAt` following goal changes, feature toggle keeping one featured campaign, soft delete and restore; every write is 403 in Demo Mode and revalidates `/` and the campaign page.
 - Landing page `/` lists campaigns: featured, newest live, then every public campaign newest first with pagination (`/api/campaigns`, edge-cached for an hour); regenerated hourly.
 - Campaign page at `/c/[slug]`: rich description rendered on the server, phase badge with countdown and campaign time zone, Achieved badge, closed state with the sign form replaced, progress past 100% and milestone ticks; drafts and deleted campaigns are 404. `/` shows the default campaign the same way for now.

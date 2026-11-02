@@ -1,5 +1,8 @@
-import { ExternalLink, LayoutDashboard, LogOut, Megaphone } from "lucide-react";
+"use client";
+
+import { ExternalLink, LayoutDashboard, ListChecks, LogOut, Megaphone } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +12,15 @@ import { DEMO_MODE } from "@/lib/demo";
 const navItem = "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors [&_svg]:size-4";
 
 // Layout after TailAdmin: fixed-width sidebar on desktop, sticky top bar on every size.
-export function AdminShell({ email, children }: { email: string; children: React.ReactNode }) {
+const NAV = [
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/campaigns", label: "Campaigns", icon: ListChecks },
+];
+
+type Props = { email: string; title: string; actions?: React.ReactNode; children: React.ReactNode };
+
+export function AdminShell({ email, title, actions, children }: Props) {
+  const path = usePathname();
   return (
     <div className="flex min-h-screen bg-muted/30">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-background px-4 py-6 lg:flex">
@@ -21,27 +32,45 @@ export function AdminShell({ email, children }: { email: string; children: React
         </Link>
         <p className="mt-8 px-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">Menu</p>
         <nav className="mt-2 space-y-1">
-          <span className={`${navItem} bg-accent text-accent-foreground`} aria-current="page">
-            <LayoutDashboard aria-hidden /> Dashboard
-          </span>
+          {NAV.map(({ href, label, icon: Icon }) => {
+            const active = href === "/admin" ? path === href : path.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={`${navItem} ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              >
+                <Icon aria-hidden /> {label}
+              </Link>
+            );
+          })}
           <Link href="/" className={`${navItem} text-muted-foreground hover:bg-accent/60 hover:text-foreground`}>
-            <ExternalLink aria-hidden /> View petition
+            <ExternalLink aria-hidden /> View site
           </Link>
         </nav>
         {DEMO_MODE && (
           <div className="mt-auto rounded-xl border bg-muted/50 p-4 text-xs text-muted-foreground">
             <p className="font-medium text-foreground">View-only demo</p>
-            <p className="mt-1">Settings and pins are disabled. Data shown is sample data.</p>
+            <p className="mt-1">Saving, pins and campaign changes are disabled. Data shown is sample data.</p>
           </div>
         )}
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b bg-background/80 px-4 backdrop-blur-xl lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <h1 className="text-lg font-semibold tracking-tight">Dashboard</h1>
+            <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
             {DEMO_MODE && <Badge className="hidden sm:inline-flex">Demo Mode</Badge>}
+            <nav className="flex gap-1 lg:hidden" aria-label="Admin sections">
+              {NAV.map(({ href, label, icon: Icon }) => (
+                <Link key={href} href={href} aria-label={label} className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground [&_svg]:size-4">
+                  <Icon aria-hidden />
+                </Link>
+              ))}
+            </nav>
           </div>
           <div className="flex items-center gap-1">
+            {actions}
             <span className="mr-2 hidden truncate text-sm text-muted-foreground md:inline">{email}</span>
             <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={signOut}>
