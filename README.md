@@ -148,7 +148,7 @@ The app runs with an empty `.env.local`. Add services one at a time:
 | --- | --- |
 | `NEXT_PUBLIC_FIREBASE_*` | Real admin login via Firebase Auth, avatar uploads |
 | `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` | Firestore reads/writes, token verification, `npm run seed` |
-| `ADMIN_EMAILS` | Who may use `/admin` |
+| `ADMIN_EMAILS` | Who may use `/admin` (developer accounts are admins without being listed) |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Bot protection (`.env.example` has Cloudflare's test keys) |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Rate limiting |
 | `NEXT_PUBLIC_POSTHOG_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_PERSONAL_API_KEY` | Tracking and real dashboard stats |
@@ -180,6 +180,7 @@ The app runs with an empty `.env.local`. Add services one at a time:
 | `npm run lint` / `npm run typecheck` | ESLint / `tsc --noEmit` |
 | `npm test` | Vitest |
 | `npm run seed` | Seed Firestore from `src/data/seed.ts` |
+| `npm run developer -- you@example.com` | Create or reset a developer account: random password printed once, `developer` custom claim |
 
 CI (`.github/workflows/check.yml`) runs lint, typecheck, tests and build on every pull request.
 
