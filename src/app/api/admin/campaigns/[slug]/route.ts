@@ -6,7 +6,7 @@ import { goalReachedAfterEdit } from "@/lib/campaign";
 import { campaignInputSchema, slugSchema } from "@/lib/campaign-schema";
 import { DEMO_DISABLED_MESSAGE, DEMO_MODE } from "@/lib/demo";
 import { adminDb } from "@/lib/firebase/admin";
-import { toCampaign } from "@/lib/petition";
+import { getCampaign, toCampaign } from "@/lib/petition";
 import { isAdmin } from "@/lib/server/admin-auth";
 import { inputToDoc } from "@/lib/server/campaign-store";
 
@@ -26,6 +26,15 @@ const done = (slug: string) => {
   return NextResponse.json({ slug });
 };
 const notFound = () => NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+
+/** One campaign for the edit form, drafts and deleted included. Reads are allowed in Demo Mode. */
+export async function GET(req: Request, ctx: Ctx) {
+  if (!(await isAdmin(req))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const slug = slugSchema.safeParse((await ctx.params).slug);
+  if (!slug.success) return NextResponse.json({ error: "Invalid campaign" }, { status: 400 });
+  const campaign = await getCampaign(slug.data);
+  return campaign ? NextResponse.json({ campaign }, { headers: { "Cache-Control": "no-store" } }) : notFound();
+}
 
 /** Full edit from the campaign form. The slug is fixed once created. */
 export async function PUT(req: Request, ctx: Ctx) {

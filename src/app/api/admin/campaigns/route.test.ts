@@ -22,6 +22,12 @@ describe("admin campaign API in Demo Mode", () => {
     expect((await res.json()).campaigns).toHaveLength(5);
   });
 
+  it("returns one campaign for the edit form", async () => {
+    const res = await one.GET(req("GET"), ctx);
+    expect((await res.json()).campaign.slug).toBe("default");
+    expect((await one.GET(req("GET"), { params: Promise.resolve({ slug: "nope-nope" }) })).status).toBe(404);
+  });
+
   it("refuses every write with the Demo Mode message, before validation or Firestore", async () => {
     for (const res of [
       await list.POST(req("POST", {})),

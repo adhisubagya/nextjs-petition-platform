@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArchiveRestore, ExternalLink, Star, Trash2 } from "lucide-react";
+import { ArchiveRestore, ExternalLink, Plus, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -41,7 +41,15 @@ export function CampaignsAdmin() {
   }
 
   return (
-    <AdminShell email={session.email} title="Campaigns">
+    <AdminShell
+      email={session.email}
+      title="Campaigns"
+      actions={
+        <Link href="/admin/campaigns/new" className={buttonVariants({ size: "sm" })}>
+          <Plus aria-hidden /> New<span className="sr-only sm:not-sr-only"> campaign</span>
+        </Link>
+      }
+    >
       <div className="flex gap-2" role="group" aria-label="Filter campaigns">
         {[false, true].map((deleted) => (
           <Button key={String(deleted)} size="sm" variant={showDeleted === deleted ? "default" : "outline"} aria-pressed={showDeleted === deleted} onClick={() => setShowDeleted(deleted)}>
@@ -74,7 +82,9 @@ export function CampaignsAdmin() {
                 return (
                   <tr key={c.slug} className="transition-colors hover:bg-muted/40">
                     <td className="px-4 py-3 sm:px-6">
-                      <p className="font-medium">{c.title}</p>
+                      <Link href={`/admin/campaigns/${c.slug}`} className="font-medium hover:underline">
+                        {c.title}
+                      </Link>
                       <p className="text-xs text-muted-foreground">/c/{c.slug}</p>
                     </td>
                     <td className="px-4 py-3 sm:px-6">

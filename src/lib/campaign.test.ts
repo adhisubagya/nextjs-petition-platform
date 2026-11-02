@@ -155,6 +155,11 @@ describe("campaignInputSchema", () => {
     expect(v.status).toBe("draft");
     expect(v.milestones[0].label).toBe("");
   });
+  it("reports malformed dates as issues instead of throwing", () => {
+    const r = campaignInputSchema.safeParse({ ...valid, title: "", end: "T", timeZone: "Nowhere/City" });
+    expect(r.success).toBe(false);
+    expect(r.error!.issues.map((i) => i.path[0])).toEqual(expect.arrayContaining(["title", "end", "timeZone"]));
+  });
   it("accepts Indefinitely", () => {
     expect(campaignInputSchema.safeParse({ ...valid, end: null }).success).toBe(true);
   });
