@@ -26,7 +26,7 @@ export type Health = {
 };
 
 // shortcut: 14 GETs per counter per load (42 total, admin-only); switch to MGET if the dashboard gets polled.
-export async function readHealth(store: Store = defaultStore, now = Date.now(), env = process.env): Promise<Health> {
+export async function readHealth(store: Store = defaultStore, now = Date.now(), env: Record<string, string | undefined> = process.env): Promise<Health> {
   const sum = async (name: string, from: number) => {
     const vals = await Promise.all(Array.from({ length: 7 }, (_, i) => store.get(`metric:${day(now - (from + i) * DAY_MS)}:${name}`)));
     return vals.reduce((s, v) => s + Number(v ?? 0), 0);
