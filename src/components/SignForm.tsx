@@ -24,9 +24,9 @@ async function liveIdToken() {
   return auth.currentUser?.getIdToken() ?? null;
 }
 
-type Props = { email: string; onSigned: (comment: Comment) => void; onSignOut: () => void };
+type Props = { campaign: string; email: string; onSigned: (comment: Comment) => void; onSignOut: () => void };
 
-export function SignForm({ email, onSigned, onSignOut }: Props) {
+export function SignForm({ campaign, email, onSigned, onSignOut }: Props) {
   const [token, setToken] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export function SignForm({ email, onSigned, onSignOut }: Props) {
       const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(idToken && { Authorization: `Bearer ${idToken}` }) },
-        body: JSON.stringify({ ...values, avatarUrl, turnstileToken: token }),
+        body: JSON.stringify({ ...values, avatarUrl, turnstileToken: token, campaign }),
       });
       const body = await res.json();
       if (!res.ok) return setStatus(body.error ?? "Something went wrong.");
