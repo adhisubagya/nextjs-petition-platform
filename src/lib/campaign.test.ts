@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { campaignPhase, canSign, isIanaZone, milestoneLadder, utcToWallClock, wallClockToUtc } from "./campaign";
+import { campaignPhase, canSign, reachesGoal, isIanaZone, milestoneLadder, utcToWallClock, wallClockToUtc } from "./campaign";
 import { campaignInputSchema, docToText, richTextDocSchema } from "./campaign-schema";
 
 const base = {
@@ -31,6 +31,16 @@ describe("campaignPhase", () => {
   it("only Live can sign", () => {
     expect(canSign(base, at("2026-11-15T00:00:00Z"))).toBe(true);
     expect(canSign(base, at("2026-11-25T00:00:00Z"))).toBe(false);
+  });
+});
+
+describe("reachesGoal", () => {
+  it("is true only for the signature that reaches the goal, once", () => {
+    expect(reachesGoal({ signatureCount: 8, goal: 10, goalReachedAt: null })).toBe(false);
+    expect(reachesGoal({ signatureCount: 9, goal: 10, goalReachedAt: null })).toBe(true);
+    expect(reachesGoal({ signatureCount: 10, goal: 10, goalReachedAt: "2026-11-01T00:00:00Z" })).toBe(false);
+    // Already past the goal but never recorded (older docs, or goal lowered): the next signature records it.
+    expect(reachesGoal({ signatureCount: 50, goal: 10, goalReachedAt: null })).toBe(true);
   });
 });
 

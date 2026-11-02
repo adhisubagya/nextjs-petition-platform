@@ -59,4 +59,12 @@ describe("GET /api/comments cursor", () => {
     expect((await get("?cursor=random-cache-buster")).status).toBe(400);
     expect((await get("?cursor=")).status).toBe(400);
   });
+
+  it("follows the signing window in Demo Mode too", async () => {
+    const body = { name: "", message: "Count me in", turnstileToken: "tok" };
+    expect((await post({ ...body, campaign: "scheduled-campaign" })).status).toBe(403);
+    expect((await post({ ...body, campaign: "closed-campaign" })).status).toBe(403);
+    expect((await post({ ...body, campaign: "achieved-campaign" })).status).toBe(201);
+    expect((await post({ ...body, campaign: "missing-campaign" })).status).toBe(404);
+  });
 });
