@@ -9,5 +9,6 @@ export default defineConfig({
       "server-only": path.resolve(__dirname, "src/test/empty.ts"),
     },
   },
+  esbuild: { jsx: "automatic" },
   test: { environment: "node" },
 });

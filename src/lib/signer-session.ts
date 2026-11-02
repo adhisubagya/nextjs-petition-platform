@@ -4,7 +4,8 @@ import { useSyncExternalStore } from "react";
 import { DEMO_MODE } from "@/lib/demo";
 
 // Signer UI state for this tab. In live mode the Firebase Auth session (custom token) is what the API trusts.
-export type Signer = { email: string; signed: boolean };
+// `signed` lists campaign slugs signed in this tab, so another campaign still shows its form.
+export type Signer = { email: string; signed: string[] };
 
 const KEY = "signer";
 const EVENT = "signer-change";
@@ -34,11 +35,12 @@ function subscribe(cb: () => void) {
 
 export function useSigner() {
   const raw = useSyncExternalStore(subscribe, read, () => null);
-  const signer: Signer | null = raw ? JSON.parse(raw) : null;
+  const parsed: Signer | null = raw ? JSON.parse(raw) : null;
+  const signer = parsed && { ...parsed, signed: Array.isArray(parsed.signed) ? parsed.signed : [] };
   return {
     signer,
-    signIn: (email: string) => write({ email, signed: false }),
-    markSigned: () => signer && write({ ...signer, signed: true }),
+    signIn: (email: string) => write({ email, signed: [] }),
+    markSigned: (slug: string) => signer && write({ ...signer, signed: [...signer.signed, slug] }),
     signOut: () => {
       write(null);
       if (!DEMO_MODE) void import("@/lib/firebase/client").then(({ clientAuth }) => clientAuth().signOut());

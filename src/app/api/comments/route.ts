@@ -1,5 +1,6 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { NextResponse, type NextRequest } from "next/server";
+import { slugSchema } from "@/lib/campaign-schema";
 import { DEMO_MODE } from "@/lib/demo";
 import { adminDb, petitionId } from "@/lib/firebase/admin";
 import { getComments } from "@/lib/petition";
@@ -19,10 +20,12 @@ export async function GET(req: NextRequest) {
   if (cursor !== null && !CURSOR.test(cursor)) {
     return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
   }
+  const campaign = slugSchema.safeParse(req.nextUrl.searchParams.get("campaign") ?? petitionId());
+  if (!campaign.success) return NextResponse.json({ error: "Invalid campaign" }, { status: 400 });
   if (!(await allowCommentRead(clientIp(req)))) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
-  const page = await getComments(cursor);
+  const page = await getComments(cursor, campaign.data);
   // Cached at the edge for 24h so pagination costs no Firestore reads for most visitors.
   return NextResponse.json(page, {
     headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600" },

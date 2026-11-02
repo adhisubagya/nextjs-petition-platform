@@ -1,6 +1,7 @@
 import "server-only";
-import type { DocumentSnapshot } from "firebase-admin/firestore";
-import { seedComments, seedPetition } from "@/data/seed";
+import type { DocumentData, DocumentSnapshot, Timestamp } from "firebase-admin/firestore";
+import { seedCampaigns, seedComments, seedPetition } from "@/data/seed";
+import type { Campaign, RichTextNode } from "@/lib/campaign";
 import { adminDb, isFirebaseAdminConfigured, petitionId } from "@/lib/firebase/admin";
 import type { Comment, Petition } from "@/lib/types";
 
@@ -23,21 +24,67 @@ function toComment(doc: DocumentSnapshot): Comment {
   };
 }
 
+const fallbackCampaigns = seedCampaigns();
+
+const iso = (t: Timestamp | null | undefined) => t?.toDate().toISOString() ?? null;
+// Docs written before campaigns existed have a plain-text description and no dates.
+const legacyDoc = (text: string): RichTextNode => ({
+  type: "doc",
+  content: text ? [{ type: "paragraph", content: [{ type: "text", text }] }] : [],
+});
+
+export function toCampaign(slug: string, d: DocumentData): Campaign {
+  const description = typeof d.description === "string" ? legacyDoc(d.description) : d.description;
+  const created = iso(d.createdAt) ?? new Date(0).toISOString();
+  return {
+    slug,
+    title: d.title ?? "",
+    subtitle: d.subtitle ?? "",
+    description: description ?? legacyDoc(""),
+    descriptionText: d.descriptionText ?? (typeof d.description === "string" ? d.description : ""),
+    goal: d.goal ?? 1,
+    milestones: d.milestones ?? [],
+    startAt: iso(d.startAt) ?? created,
+    endAt: iso(d.endAt),
+    timeZone: d.timeZone ?? "UTC",
+    status: d.status ?? "published",
+    featured: Boolean(d.featured),
+    signatureCount: d.signatureCount ?? 0,
+    goalReachedAt: iso(d.goalReachedAt),
+    deletedAt: iso(d.deletedAt),
+    createdAt: created,
+    updatedAt: iso(d.updatedAt) ?? created,
+  };
+}
+
+/** Any stored campaign, including drafts and deleted ones; callers decide visibility with `campaignPhase`. */
+export async function getCampaign(slug: string): Promise<Campaign | null> {
+  if (!isFirebaseAdminConfigured) {
+    const id = slug === petitionId() ? "default" : slug;
+    const c = fallbackCampaigns.find((c) => c.slug === id);
+    return c ? { ...c, slug } : null;
+  }
+  const doc = await adminDb().collection("petitions").doc(slug).get();
+  return doc.exists ? toCampaign(slug, doc.data()!) : null;
+}
+
 export async function getPetition(): Promise<Petition> {
   if (!isFirebaseAdminConfigured) return { id: petitionId(), ...seedPetition };
   const doc = await adminDb().collection("petitions").doc(petitionId()).get();
   return { id: doc.id, ...seedPetition, ...doc.data() } as Petition;
 }
 
-export async function getComments(cursor: string | null = null): Promise<CommentPage> {
+export async function getComments(cursor: string | null = null, slug = petitionId()): Promise<CommentPage> {
   if (!isFirebaseAdminConfigured) {
+    // Only the default campaign has seed comments.
+    if (slug !== petitionId()) return { comments: [], nextCursor: null };
     const start = cursor ? fallbackComments.findIndex((c) => c.id === cursor) + 1 : 0;
     const comments = fallbackComments.slice(start, start + PAGE_SIZE);
     const more = start + PAGE_SIZE < fallbackComments.length;
     return { comments, nextCursor: more ? comments.at(-1)!.id : null };
   }
 
-  const col = adminDb().collection("petitions").doc(petitionId()).collection("comments");
+  const col = adminDb().collection("petitions").doc(slug).collection("comments");
   let query = col.orderBy("pinned", "desc").orderBy("createdAt", "desc").limit(PAGE_SIZE + 1);
   if (cursor) {
     const last = await col.doc(cursor).get();
