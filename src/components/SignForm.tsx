@@ -9,6 +9,7 @@ import { z } from "zod";
 import { HoldToSign } from "@/components/HoldToSign";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label, Textarea } from "@/components/ui/input";
+import { track } from "@/lib/analytics";
 import { DEMO_MODE } from "@/lib/demo";
 import { commentFieldsSchema, MESSAGE_MAX, NAME_MAX, hasName, nameIssue } from "@/lib/schemas";
 import { siteKey } from "@/lib/turnstile";
@@ -54,6 +55,7 @@ export function SignForm({ campaign, email, onSigned, onSignOut }: Props) {
       });
       const body = await res.json();
       if (!res.ok) return setStatus(body.error ?? "Something went wrong.");
+      track("signed");
       // The parent swaps this form for the share card, so there is nothing to reset.
       onSigned({ ...body.comment, avatarUrl: body.comment.avatarUrl ?? (small && URL.createObjectURL(small)) });
     } catch {
