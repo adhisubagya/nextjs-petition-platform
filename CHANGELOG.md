@@ -23,6 +23,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Admin metrics dashboard, part 2: visitors and sessions chart with bounce rate and average session tiles, the signing funnel with step conversion, referrer, country, device and share-channel breakdowns, and a campaign comparison table in the All campaigns view. The old 7-day traffic cards are replaced.
 - Admin metrics dashboard, part 1: campaign and range filters kept in the URL, KPI tiles with deltas against the previous period (arrow and text, not colour alone), a signatures chart with the previous period dashed and a cumulative mode with milestone and goal lines, a pace card, a table view, and a "Sample data" badge. Chart colours checked for colour-blind separation in light and dark.
 - Metrics API at /api/admin/metrics (campaign or All campaigns, any range): signatures, traffic, funnel, breakdowns, pace and a campaign comparison from the daily rollups, cached 10 minutes. Demo Mode serves deterministic sample rollups that end at each campaign's real count.
 - Nightly rollup at /api/cron/rollup (Vercel Cron, 00:30 UTC): copies PostHog page views, visitors, sessions, bounces, session time, funnel steps and the top referrers, countries, devices and share channels into each campaign's daily docs. Requires CRON_SECRET, is idempotent, never touches signature counts, and backfills up to a year a few chunks per run.

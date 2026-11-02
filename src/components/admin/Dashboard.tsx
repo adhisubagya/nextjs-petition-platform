@@ -12,7 +12,6 @@ import { Input, Label } from "@/components/ui/input";
 import { adminApi } from "@/lib/admin-api";
 import { DEMO_DISABLED_MESSAGE, DEMO_MODE } from "@/lib/demo";
 import type { CommentPage } from "@/lib/petition";
-import type { Stats } from "@/lib/server/posthog";
 import type { Petition } from "@/lib/types";
 import { useAdminSession } from "./AdminGate";
 import { AdminShell } from "./AdminShell";
@@ -25,9 +24,7 @@ export function Dashboard({ petition }: { petition: Petition }) {
 
   const api = <T,>(path: string, init?: RequestInit) => adminApi<T>(session, path, init);
 
-  const stats = useQuery({ queryKey: ["admin-stats"], queryFn: () => api<Stats>("/api/admin/stats") });
   const comments = useQuery({ queryKey: ["admin-comments"], queryFn: () => api<CommentPage>("/api/comments") });
-  const maxReferrer = Math.max(1, ...(stats.data?.referrers.map((r) => r.count) ?? []));
 
   // Demo Mode: controls look live but never call the API.
   async function guarded(action: () => Promise<unknown>, success: string) {
@@ -45,30 +42,7 @@ export function Dashboard({ petition }: { petition: Petition }) {
     <AdminShell email={session.email} title="Dashboard">
       <Metrics />
 
-      <div className="grid gap-4 md:gap-6 xl:grid-cols-[1fr_360px]">
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle>Top sources</CardTitle>
-            <CardDescription>Last 7 days{stats.data?.sample && " · sample data"}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats.isError && <p className="text-sm text-destructive">Could not load analytics.</p>}
-            <ul className="space-y-4">
-              {stats.data?.referrers.map((r) => (
-                <li key={r.source} className="text-sm">
-                  <div className="flex justify-between">
-                    <span>{r.source}</span>
-                    <span className="text-muted-foreground tabular-nums">{r.count.toLocaleString("en-US")}</span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${(r.count / maxReferrer) * 100}%` }} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-4 md:gap-6 xl:max-w-md">
         <Card className="rounded-2xl">
           <CardHeader>
             <CardTitle>Settings</CardTitle>
