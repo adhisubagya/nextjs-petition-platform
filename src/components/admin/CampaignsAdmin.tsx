@@ -43,21 +43,18 @@ export function CampaignsAdmin() {
   }
 
   return (
-    <AdminShell
-      email={session.email}
-      title="Campaigns"
-      actions={
+    <AdminShell email={session.email} title="Campaigns">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-2" role="group" aria-label="Filter campaigns">
+          {[false, true].map((deleted) => (
+            <Button key={String(deleted)} size="sm" variant={showDeleted === deleted ? "default" : "outline"} aria-pressed={showDeleted === deleted} onClick={() => setShowDeleted(deleted)}>
+              {deleted ? "Deleted" : "Campaigns"}
+            </Button>
+          ))}
+        </div>
         <Link href="/admin/campaigns/new" className={buttonVariants({ size: "sm" })}>
-          <Plus aria-hidden /> New<span className="sr-only sm:not-sr-only"> campaign</span>
+          <Plus aria-hidden /> New campaign
         </Link>
-      }
-    >
-      <div className="flex gap-2" role="group" aria-label="Filter campaigns">
-        {[false, true].map((deleted) => (
-          <Button key={String(deleted)} size="sm" variant={showDeleted === deleted ? "default" : "outline"} aria-pressed={showDeleted === deleted} onClick={() => setShowDeleted(deleted)}>
-            {deleted ? "Deleted" : "Campaigns"}
-          </Button>
-        ))}
       </div>
       <ConfirmDialog
         open={deleting !== null}
