@@ -49,6 +49,10 @@ export function campaignPhase(c: PhaseFields, now: Date | number = Date.now()): 
 }
 
 export const canSign = (c: PhaseFields, now?: Date | number) => campaignPhase(c, now) === "live";
+/** True when this signature is the one that reaches the goal (or the goal was reached before it was ever recorded). */
+export const reachesGoal = (c: Pick<Campaign, "signatureCount" | "goal" | "goalReachedAt">) =>
+  c.goalReachedAt === null && c.signatureCount + 1 >= c.goal;
+
 export const isAchieved = (c: Pick<Campaign, "goalReachedAt">) => c.goalReachedAt !== null;
 
 export function isIanaZone(zone: string): boolean {
