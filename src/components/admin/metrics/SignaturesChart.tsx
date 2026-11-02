@@ -18,10 +18,14 @@ export default function SignaturesChart({ rows, cumulative, goal, milestones = [
   const hasPrev = rows.some((r) => r.previous !== null);
   const top = Math.max(0, ...rows.map((r) => r.current));
   const bottom = rows[0]?.current ?? 0;
-  // Only lines inside the drawn range, or the axis would stretch to a far-off goal and flatten the curve.
-  const refs = cumulative
-    ? [...milestones, ...(goal ? [{ count: goal, label: "Goal" }] : [])].filter((m) => m.count > bottom && m.count <= top * 1.15)
-    : [];
+  // Lines inside the drawn range only (or a far-off goal flattens the curve), and spaced apart so labels never pile up.
+  const gap = (top - bottom) * 0.08;
+  const refs: Milestone[] = [];
+  if (cumulative) {
+    for (const m of milestones.filter((m) => m.count > bottom && m.count <= top && (!goal || m.count < goal - gap)))
+      if (!refs.length || m.count - refs[refs.length - 1].count >= gap) refs.push(m);
+    if (goal && goal > bottom && goal <= top * 1.3) refs.push({ count: goal, label: "Goal" });
+  }
 
   return (
     <ChartContainer config={config} className="aspect-auto h-64 w-full">
@@ -34,7 +38,7 @@ export default function SignaturesChart({ rows, cumulative, goal, milestones = [
         </defs>
         <CartesianGrid vertical={false} strokeOpacity={0.5} />
         <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} minTickGap={28} />
-        <YAxis tickLine={false} axisLine={false} width={44} allowDecimals={false} domain={cumulative ? ["dataMin", "auto"] : [0, "auto"]} />
+        <YAxis tickLine={false} axisLine={false} width={48} allowDecimals={false} tickFormatter={(v: number) => v.toLocaleString("en-US")} domain={cumulative ? ["dataMin", "auto"] : [0, "auto"]} />
         <ChartTooltip cursor content={<ChartTooltipContent indicator="line" />} />
         {refs.map((m) => (
           <ReferenceLine
