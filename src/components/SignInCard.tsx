@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
+import { track } from "@/lib/analytics";
 import { codeSchema, emailSchema } from "@/lib/schemas";
 import { siteKey } from "@/lib/turnstile";
 
@@ -25,6 +26,7 @@ export function SignInCard({ onSignedIn }: { onSignedIn: (email: string) => void
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [started, setStarted] = useState(false);
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -46,6 +48,7 @@ export function SignInCard({ onSignedIn }: { onSignedIn: (email: string) => void
       const data = await post("/api/auth/code", { email: parsed.data, turnstileToken: token });
       setEmail(parsed.data);
       setDemoCode(data.demoCode ?? null);
+      track("code_sent");
       setStep("code");
     });
   };
@@ -61,6 +64,7 @@ export function SignInCard({ onSignedIn }: { onSignedIn: (email: string) => void
         const [{ signInWithCustomToken }, { clientAuth }] = await Promise.all([import("firebase/auth"), import("@/lib/firebase/client")]);
         await signInWithCustomToken(clientAuth(), data.token);
       }
+      track("code_verified");
       onSignedIn(email);
     });
   };
@@ -78,7 +82,7 @@ export function SignInCard({ onSignedIn }: { onSignedIn: (email: string) => void
           <form onSubmit={requestCode} className="space-y-4" noValidate>
             <div className="space-y-2">
               <Label htmlFor="signin-email">Email</Label>
-              <Input id="signin-email" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input id="signin-email" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} onFocus={() => !started && (setStarted(true), track("sign_started"))} />
               <p className="text-xs text-muted-foreground">Used only to sign you in and stop duplicate signatures.</p>
             </div>
             <Turnstile siteKey={siteKey} onSuccess={setToken} onExpire={() => setToken(null)} options={{ size: "flexible" }} />
