@@ -17,9 +17,9 @@ const NAV = [
   { href: "/admin/campaigns", label: "Campaigns", icon: ListChecks },
 ];
 
-type Props = { email: string; title: string; actions?: React.ReactNode; children: React.ReactNode };
+type Props = { email: string; title: string; children: React.ReactNode };
 
-export function AdminShell({ email, title, actions, children }: Props) {
+export function AdminShell({ email, title, children }: Props) {
   const path = usePathname();
   return (
     <div className="flex min-h-screen bg-muted/30">
@@ -70,7 +70,6 @@ export function AdminShell({ email, title, actions, children }: Props) {
             </nav>
           </div>
           <div className="flex items-center gap-1">
-            {actions}
             <span className="mr-2 hidden truncate text-sm text-muted-foreground md:inline">{email}</span>
             <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={signOut}>
