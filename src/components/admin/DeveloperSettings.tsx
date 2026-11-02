@@ -47,7 +47,7 @@ export function DeveloperSettings() {
             <CardHeader>
               <CardTitle>System mode</CardTitle>
               <CardDescription>
-                Single campaign: the home page is that campaign, campaign links go home, and admins can only edit it. Multiple campaigns: every feature is on.
+                Single campaign: the home page shows the featured campaign (else the newest live one), campaign links go home, and admins can only edit that campaign. Multiple campaigns: every feature is on.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-2 sm:grid-cols-2">

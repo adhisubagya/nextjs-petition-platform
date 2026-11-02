@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { campaignInputSchema } from "@/lib/campaign-schema";
 import { DEMO_DISABLED_MESSAGE, DEMO_MODE } from "@/lib/demo";
 import { adminDb, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { toCampaign } from "@/lib/petition";
+import { singleModeSlug, toCampaign } from "@/lib/petition";
 import { guard, isAdmin } from "@/lib/server/admin-auth";
 import { inputToDoc } from "@/lib/server/campaign-store";
 import { seedCampaigns } from "@/data/seed";
@@ -17,7 +17,8 @@ export async function GET(req: Request) {
     ? (await adminDb().collection("petitions").get()).docs.map((d) => toCampaign(d.id, d.data()))
     : seedCampaigns();
   campaigns.sort((a, b) => b.startAt.localeCompare(a.startAt));
-  return NextResponse.json({ campaigns }, { headers: { "Cache-Control": "no-store" } });
+  const single = await singleModeSlug();
+  return NextResponse.json({ campaigns: single ? campaigns.filter((c) => c.slug === single) : campaigns }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(req: Request) {

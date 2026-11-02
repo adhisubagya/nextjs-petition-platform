@@ -4,6 +4,7 @@ import { seedCampaigns, seedComments, seedPetition } from "@/data/seed";
 import { campaignPhase, type Campaign, type CampaignSummary, type RichTextNode } from "@/lib/campaign";
 import { adminDb, isFirebaseAdminConfigured, petitionId } from "@/lib/firebase/admin";
 import type { Comment, Petition } from "@/lib/types";
+import { getSettings } from "@/lib/server/settings";
 
 export const PAGE_SIZE = 10;
 
@@ -102,6 +103,18 @@ export async function getHighlights(now = Date.now()): Promise<{ featured: Campa
     featured: all.find((c) => c.featured) ?? null,
     newestLive: all.find((c) => campaignPhase(c, now) === "live") ?? null,
   };
+}
+
+/** Single-campaign mode shows this one: the featured campaign, else the newest live one, else the newest public one. */
+export async function getSingleCampaign(now = Date.now()): Promise<Campaign | null> {
+  const all = await visibleCampaigns();
+  return all.find((c) => c.featured) ?? all.find((c) => campaignPhase(c, now) === "live") ?? all[0] ?? null;
+}
+
+/** The campaign `/` shows when the developer picked single-campaign mode, else null (landing page). */
+export async function singleModeSlug(): Promise<string | null> {
+  if ((await getSettings()).mode !== "single") return null;
+  return (await getSingleCampaign())?.slug ?? null;
 }
 
 export async function getPetition(): Promise<Petition> {
