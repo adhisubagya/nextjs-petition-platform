@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { campaignPhase, isAchieved, utcToWallClock } from "@/lib/campaign";
+import { campaignInputSchema } from "@/lib/campaign-schema";
 import { commentInputSchema } from "@/lib/schemas";
-import { seedComments, seedPetition } from "./seed";
+import { seedCampaigns, seedComments, seedPetition } from "./seed";
 
 describe("seed data", () => {
   it("has 10-20 comments that pass validation", () => {
@@ -11,5 +13,20 @@ describe("seed data", () => {
   });
   it("uses the demo signature count", () => {
     expect(seedPetition.signatureCount).toBe(8452);
+  });
+  it("has campaigns in every public state, one featured, all valid", () => {
+    const now = Date.UTC(2026, 10, 2);
+    const campaigns = seedCampaigns(now);
+    const states = campaigns.map((c) => `${campaignPhase(c, now)}${isAchieved(c) ? "+achieved" : ""}`);
+    expect(states).toEqual(["live", "live+achieved", "scheduled", "ended+achieved", "ended"]);
+    expect(campaigns.filter((c) => c.featured)).toHaveLength(1);
+    for (const c of campaigns) {
+      const input = {
+        ...c,
+        start: utcToWallClock(c.startAt, c.timeZone),
+        end: c.endAt && utcToWallClock(c.endAt, c.timeZone),
+      };
+      expect(campaignInputSchema.safeParse(input).success).toBe(true);
+    }
   });
 });
