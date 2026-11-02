@@ -1,269 +1,306 @@
 # Campaigns and dashboard metrics — research
 
-Date: 2026-11-02 · Status: research, nothing built yet · Base: `dev` @ 5dffaaf
+Date: 2026-11-02 · Status: research, decisions agreed, nothing built yet · Base: `dev`
 
 Two features for the admin panel:
 
-1. **Create a campaign** with title, subtitle, description, milestones, signer goal, start date (with a "Today" shortcut) and an end date or "Indefinitely".
-2. **Dashboard metrics** that show gain or loss over a chosen period (24h … all time) against the previous equal period.
+1. **Create and manage campaigns**: title, subtitle, rich description, milestones, signer goal, start and end date/time (or "Indefinitely"), per-campaign time zone.
+2. **Dashboard metrics**: gain or loss over a chosen period (24h … all time) against the previous equal period.
+
+## 0. Decisions (2026-11-02)
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Several live campaigns? What does `/` show? | Yes, any number live at once. `/` is a landing page: **featured** campaign, **newest live** campaign, then a **list of all campaigns** sorted by start date, newest first, paginated. |
+| 2 | Milestones | Signature thresholds such as 50, 75, 125, 200, 300 …, set in the admin panel, each ≤ the signer goal. |
+| 3 | Description format | Rich text editor with full formatting (headings, bold/italic, lists, links, quotes). |
+| 4 | Time zone, times | Per-campaign time zone; default = the logged-in admin's time zone. Start and end have a date **and** time. |
+| 5 | Scheduled campaigns | Visible before start ("Opens in 3 days"), but nobody can sign until the start time. |
+| 6 | After the end | Page stays up, dimmed, signing disabled. Shows **Achieved** when the goal was reached, otherwise **Closed**. Reaching the goal before the end date also closes signing (Achieved). |
+| 7 | Editing a live campaign | Allowed. Changing the start date of a live campaign, and deleting a campaign, each need an extra confirmation step in a modal. |
+| 8 | Ranges and "All" for traffic | Presets in §3.2. Traffic is copied once a day from PostHog into Firestore rollups, so "All" works for traffic and signatures without depending on PostHog retention (§3.3). |
 
 ## 1. Where the code is today
 
 | Area | Today | Gap |
 |---|---|---|
-| Data model | One `petitions/{PETITION_ID}` doc (`title`, `description`, `goal`, `signatureCount`) with `comments/` and private `signers/` subcollections. `src/lib/types.ts` | No subtitle, milestones, dates or status. One campaign per deployment, picked by env var. |
-| Admin writes | `PATCH /api/admin/petition` (goal only), comment pin. Both return 403 in Demo Mode and call `revalidatePath("/")`. | No create/list/edit campaign. |
-| Public page | `/` renders the one petition, `revalidate = 86400`. | No route per campaign, no "not started / ended" state. |
-| Signing | `POST /api/comments`: signature = comment + signer doc + `signatureCount++` in one transaction. | Never checks whether the campaign is open. |
-| Metrics | `getStats()` runs 2 HogQL queries (7-day page views, visitors, top 5 referrers), cached 1 h. Signatures = the live counter only. | No time series, no ranges, no comparison, no charts. |
-| PostHog | `posthog.init` with defaults (auto page views). No custom events. | Can't measure the sign funnel, share clicks or conversion. |
-| UI kit | shadcn copied by hand: Button, Card, Input, Label, Badge. No Radix, no `components.json`, no chart tokens (ADR 0002). | Needs Calendar, Popover, Checkbox, Field, Textarea, ToggleGroup, Select, Chart. |
+| Data model | One `petitions/{PETITION_ID}` doc (`title`, `description`, `goal`, `signatureCount`) with `comments/` and private `signers/` subcollections. | No subtitle, milestones, dates, time zone, status. One campaign per deployment. |
+| Admin writes | `PATCH /api/admin/petition` (goal only), comment pin. 403 in Demo Mode, then `revalidatePath("/")`. | No campaign create/list/edit/delete. |
+| Public page | `/` renders the one petition, `revalidate = 86400`. | No landing page, no per-campaign route, no open/closed states. |
+| Signing | `POST /api/comments`: comment + signer doc + `signatureCount++` in one transaction. | Never checks whether the campaign is open. |
+| Metrics | `getStats()`: 2 HogQL queries (7-day views, visitors, top referrers), cached 1 h. | No time series, ranges, comparison or charts. |
+| PostHog | Default `posthog.init` (auto page views), no custom events. | No funnel, share clicks or conversion. |
+| UI kit | Hand-copied shadcn Button, Card, Input, Label, Badge. No Radix, no `components.json` (ADR 0002). | Needs Field, Calendar, Popover, Checkbox, Combobox, Alert Dialog, Dialog, ToggleGroup, Select, Chart, Pagination. |
 
-## 2. Campaign creation
+## 2. Campaigns
 
-### 2.1 Data model — recommend multi-campaign, in the existing collection
+### 2.1 Data model
 
-Keep the `petitions` collection (no data migration; rules and indexes already cover it) and treat each doc as a campaign. The doc id becomes the URL slug.
+Keep the `petitions` collection (no migration; rules and indexes already cover it). Each doc is a campaign; the doc id is the URL slug.
 
 ```ts
 // petitions/{slug}
 type Campaign = {
-  title: string;            // 1–120
-  subtitle: string;         // 0–200, shown under the title and as the OG description
-  description: string;      // 1–5000 plain text, paragraphs by blank line
-  goal: number;             // signer target, 1–100,000,000
-  milestones: { count: number; label: string }[]; // ascending, each < goal, max 10
-  startAt: Timestamp;       // UTC instant
-  endAt: Timestamp | null;  // null = Indefinitely
-  timeZone: string;         // IANA, default "Asia/Jakarta"; used for date inputs and chart buckets
-  status: "draft" | "published"; // the only stored state; the rest is derived
-  signatureCount: number;   // unchanged
+  title: string;                 // 1–120
+  subtitle: string;              // 0–200; also the OG description
+  description: JSONContent;      // Tiptap document JSON (§2.5), ≤ 50 KB
+  descriptionText: string;       // plain-text copy for OG tags, search and the list card excerpt
+  goal: number;                  // 1–100,000,000
+  milestones: { count: number; label: string }[]; // ascending, each ≤ goal, max 20
+  startAt: Timestamp;            // UTC instant
+  endAt: Timestamp | null;       // null = Indefinitely
+  timeZone: string;              // IANA, e.g. "Asia/Jakarta"
+  status: "draft" | "published";
+  featured: boolean;             // at most one true; set in a transaction that clears the others
+  signatureCount: number;
+  goalReachedAt: Timestamp | null; // set by the signing transaction that hits the goal
+  deletedAt: Timestamp | null;   // soft delete (§2.7)
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };
 ```
 
-Why multi-campaign instead of "edit the one campaign": "create a new campaign" implies more than one exists (past, current, upcoming). The cost is small because comments and signers are already subcollections of the campaign doc.
+Routing: `/` landing page, `/c/[slug]` campaign page. `PETITION_ID` stays as a fallback so the current deploy keeps working during the change.
 
-Routing: `/c/[slug]` per campaign; `/` shows the **featured** campaign (see Q1). `PETITION_ID` stays as the fallback so the current deploy keeps working unchanged.
+### 2.2 Phases
 
-### 2.2 Publish state — store little, derive the rest
+Only `status`, the dates, `signatureCount` and `goalReachedAt` are stored. The phase is derived by one pure, unit-tested function `campaignPhase(c, now)`:
 
-Only `status` is stored. The phase shown in the admin list and on the page is computed:
-
-| Phase | Rule |
-|---|---|
-| Draft | `status == "draft"` |
-| Scheduled | published and `now < startAt` |
-| Live | published and `startAt <= now` and (`endAt == null` or `now < endAt`) |
-| Ended | published and `endAt != null` and `now >= endAt` |
-
-One pure function `campaignPhase(c, now)` with unit tests on the boundaries covers it.
-
-Date semantics (date-only pickers, the way people think about campaigns):
-
-- **Start** = 00:00 of the chosen day in `timeZone`. **Today** sets the date to today, so the campaign goes live as soon as it is published.
-- **End** = 23:59:59.999 of the chosen day in `timeZone` (inclusive). **Indefinitely** checked → `endAt = null` and the end picker is disabled.
-- Stored as UTC `Timestamp`s. `date-fns` (installed) plus `@date-fns/tz` (small, official) converts local day ↔ UTC instant.
-- Later, if needed: a time field for "starts at 19:00".
-
-### 2.3 Scheduling vs the 24-hour cache
-
-The page is cached for 24 h, so a scheduled campaign would not flip to live until the next regeneration.
-
-| Option | Precision | Cost | Verdict |
+| Phase | Rule | Public page | Can sign |
 |---|---|---|---|
-| A. Phase checked in the browser + enforced by the server | exact | none | **Baseline.** The cached HTML carries `startAt`/`endAt`; a small client component shows "Opens in 3 days", the sign form, or "Closed" from the visitor's clock. `POST /api/comments` rejects outside the live window (403), so a wrong clock can't sign early or late. |
-| B. Upstash QStash one-off message at `startAt` and `endAt` → `POST /api/revalidate` | seconds | free tier covers it; Upstash already in use | **Add for live mode.** Makes the cached HTML itself correct (OG tags, "Closed" text for crawlers, scheduled text hidden until start). Re-schedule on edit; verify the QStash signature. |
-| C. Vercel Cron | once a day on Hobby | free | Too coarse. |
-| D. Lower `revalidate` | minutes | more Firestore reads | Undoes ADR 0001. |
+| Draft | `status == "draft"` | 404 | no |
+| Scheduled | published, `now < startAt` | full page + "Opens in 3 days" countdown, sign button disabled | no |
+| Live | published, started, not ended, goal not reached | normal | yes |
+| Achieved | published, `goalReachedAt != null` (any time) | dimmed, "Achieved" badge, final count | no |
+| Closed | published, `endAt <= now`, goal not reached | dimmed, "Closed" badge, final count | no |
 
-Caveat for A alone: a scheduled campaign's text is in the public HTML before it starts. If it must stay secret until launch, don't render scheduled campaigns publicly and use B to reveal them at `startAt` (Q5). Demo Mode uses A only.
+The signing transaction reads the campaign, refuses unless the phase is Live, and sets `goalReachedAt` on the signature that reaches the goal. Two people signing at the same moment can't both slip past the goal, because Firestore transactions re-run on conflict.
 
-Every admin save keeps calling `revalidatePath` for the campaign path and `/`.
+"Dimmed" = the page renders normally with reduced opacity on the progress and sign area, a badge, and the sign button replaced by a disabled state with the reason. Text stays readable (contrast checked), so it is not just faded out.
 
-### 2.4 Zod schema (sketch)
+### 2.3 Dates, times and time zones
+
+- Each campaign has an IANA time zone. The form defaults it to the admin's browser zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`); a searchable Combobox lists `Intl.supportedValuesOf("timeZone")`.
+- Start and end are a date picker plus a time input, read as wall-clock time in the campaign's zone and stored as UTC `Timestamp`s. Conversion via `@date-fns/tz` (MIT, small, pairs with the installed `date-fns`).
+- **Today** shortcut sets the start to now (rounded up to the next 5 minutes), so the campaign opens as soon as it is published.
+- **Indefinitely** checked → `endAt = null`, end inputs disabled.
+- Public pages show times in the campaign's zone with its abbreviation ("Opens 10 Nov, 19:00 WIB"); the countdown uses the visitor's clock against the UTC instant, so it is correct in any zone.
+
+### 2.4 Caching and scheduling
+
+Because phases are computed from the stored instants, the cached HTML never needs to change at the start or end moment:
+
+- `/c/[slug]` keeps `revalidate = 86400`. A small client component computes the phase from the visitor's clock and flips the UI at the right second. The server refuses signatures outside the Live phase, so a wrong clock can't sign early or late.
+- `/` uses `revalidate = 3600` so "newest live" and the list order catch up within an hour. Cost: about 15 small reads per regeneration, about 360 reads a day, well inside the free 50,000.
+- Every admin save calls `revalidatePath` for `/` and the campaign path, so the admin's own changes show at once.
+- The earlier QStash idea is not needed and is dropped.
+
+### 2.5 Rich text description
+
+Recommend **Tiptap 3** (MIT; `@tiptap/react` + `@tiptap/starter-kit` 3.32): headless, so it is styled with the existing shadcn tokens. Tiptap ships an open-source "Simple Editor" template with a toolbar (headings, marks, lists, links, quotes, undo/redo) that installs as source files, like shadcn; check its license when installing. Plate (`platejs`, MIT) is the shadcn-native alternative but much larger; the official shadcn registry has no editor.
+
+Storage and rendering, safe by construction:
+
+1. Store the Tiptap **JSON**, never HTML from the browser.
+2. The server validates it with Zod (only StarterKit node and mark types, size ≤ 50 KB, link `href` must be `https:`, `http:` or `mailto:`), and derives `descriptionText`.
+3. The public page renders JSON → HTML **on the server** with `@tiptap/static-renderer`. Unknown nodes are dropped, so script injection has no path, and the editor's JavaScript never reaches the public bundle. Links get `rel="noopener nofollow ugc"`.
+4. Tailwind Typography (`prose`) styles the output.
+
+No images in the description for now: they need Firebase Storage, which needs the Blaze plan.
+
+### 2.6 Milestones
+
+- Admin sees a list of threshold rows (count + optional label, default label "{n} signatures"), with add/remove.
+- **Generate** button fills a suggested ladder up to the goal: 50, 75, 125, 200, 300, 500, 750, 1,000, 1,500, 2,000, 3,000, 5,000, 7,500, 10,000 … (×10 per decade), skipping values above the goal. Rows stay editable.
+- Validation: ascending, unique, each ≤ goal, at most 20. Lowering the goal below a milestone shows an error on that row.
+- Public page: ticks on the progress bar, "Next milestone: 300 (42 to go)", reached milestones listed with the date reached (from the daily rollups, §3.3).
+
+### 2.7 Edit and delete confirmations
+
+- **Changing the start date of a live campaign** → Alert Dialog: "This campaign is live. Moving the start to {new} will {close signing until then / keep it live}." Confirm / Cancel.
+- **Delete** → Alert Dialog where the admin types the campaign slug to enable the Delete button (the GitHub pattern), so the intent is clear.
+- Delete is a **soft delete** (`deletedAt`): hidden everywhere and the slug reserved, while comments and signers stay intact. A "Deleted" filter in the admin list allows restoring. Permanently purging subcollections is a separate, later action, since it can't be undone.
+- Publishing a draft also gets a confirm dialog (it becomes public at once, or at its start time).
+- Demo Mode: every dialog opens and validates, and the final button shows "Action disabled in Demo Mode."; the API returns 403.
+
+### 2.8 Zod schema (sketch)
 
 ```ts
-const milestone = z.object({
-  count: z.number().int().min(1),
-  label: z.string().trim().min(1).max(80),
-});
+const milestone = z.object({ count: z.number().int().min(1), label: z.string().trim().max(80).default("") });
+const localDateTime = z.iso.datetime({ local: true }); // "2026-11-10T19:00", wall clock in timeZone
 
 export const campaignInputSchema = z
   .object({
+    slug: z.string().regex(/^[a-z0-9](?:[a-z0-9-]{1,58}[a-z0-9])$/),
     title: z.string().trim().min(1, "Title is required").max(120),
     subtitle: z.string().trim().max(200).default(""),
-    description: z.string().trim().min(1, "Description is required").max(5000),
+    description: tiptapDocSchema,             // allowed node/mark types, https/mailto links, ≤ 50 KB
     goal: z.number().int().min(1).max(100_000_000),
-    milestones: z.array(milestone).max(10).default([]),
-    startDate: z.iso.date(),            // "2026-11-02", a day in timeZone
-    endDate: z.iso.date().nullable(),   // null when Indefinitely is checked
-    timeZone: z.string().refine(isIanaZone).default("Asia/Jakarta"),
+    milestones: z.array(milestone).max(20).default([]),
+    start: localDateTime,
+    end: localDateTime.nullable(),            // null when Indefinitely is checked
+    timeZone: z.string().refine(isIanaZone, "Unknown time zone"),
     status: z.enum(["draft", "published"]).default("draft"),
   })
-  .refine((v) => v.endDate === null || v.endDate >= v.startDate, { path: ["endDate"], message: "End must be on or after start" })
-  .refine((v) => v.milestones.every((m) => m.count < v.goal), { path: ["milestones"], message: "Milestones must be below the goal" })
+  .refine((v) => v.end === null || v.end > v.start, { path: ["end"], message: "End must be after start" })
+  .refine((v) => v.milestones.every((m) => m.count <= v.goal), { path: ["milestones"], message: "Milestones can't exceed the goal" })
   .refine((v) => v.milestones.every((m, i, a) => i === 0 || m.count > a[i - 1].count), { path: ["milestones"], message: "Milestones must be ascending" });
 ```
 
-The form keeps an `indefinitely` boolean for the checkbox and maps it to `endDate: null`. The slug is derived from the title on create (editable, `^[a-z0-9-]{3,60}$`, uniqueness checked in the create transaction). A start date in the past is only allowed when editing an existing campaign. The same schema runs on the client (React Hook Form resolver) and the server, like `commentInputSchema` today.
+The same schema runs in the form (React Hook Form resolver) and the API. The form keeps an `indefinitely` checkbox mapped to `end: null`.
 
-### 2.5 Demo Mode
+### 2.9 Landing page `/`
 
-Same pattern as goal and pin today, so the portfolio shows the whole flow:
+1. **Featured** campaign (hero: title, subtitle, progress, phase badge, CTA). Hidden if none.
+2. **Newest live** campaign (latest `startAt` among Live), skipped if it is the featured one.
+3. **All campaigns**: cards (title, subtitle, excerpt, progress, phase badge), sorted by `startAt` descending, 12 per page. Pagination uses a Firestore cursor on `startAt` (`?after=` in the URL), cached at the edge like the comments API. Needs a composite index `status + deletedAt + startAt desc`.
 
-- The create form is fully usable: validation, Today shortcut, Indefinitely, milestone rows, live preview card.
-- **Save** shows the toast "Action disabled in Demo Mode."; the API returns 403 before touching Firestore.
-- The admin campaign list is seed data with one campaign in each phase (draft, scheduled, live, ended) so every state is visible.
+Phase badges on cards are computed client-side, as on the campaign page.
 
-### 2.6 shadcn/ui pieces (checked against the live registry, new-york-v4)
+### 2.10 shadcn/ui pieces (new-york-v4 registry, checked 2026-11-02)
 
-| Need | Registry item | Pulls in |
-|---|---|---|
-| Form layout + errors with React Hook Form | `field` (newer replacement for the `form` wrapper), pattern from `form-rhf-demo` | `separator` |
-| Milestone rows (add / remove) | `form-rhf-array` example (`useFieldArray`) | `input-group` |
-| Description | `textarea` | — |
-| Start / end date | `calendar` + `popover`; `date-picker-with-presets` shows the preset pattern for **Today** | `react-day-picker`, Radix Popover |
-| Indefinitely | `checkbox` (`field-checkbox` layout) | Radix Checkbox |
-| Draft / Publish | `button`, `alert-dialog` to confirm publishing | Radix Alert Dialog |
-| Campaign list | `table` + `badge` per phase | — |
-| Create / edit surface | own page `/admin/campaigns/new` (simplest), or `sheet` | — |
+| Need | Item |
+|---|---|
+| Form layout and errors with React Hook Form | `field` (+ patterns from `form-rhf-demo`) |
+| Milestone rows | `form-rhf-array` pattern (`useFieldArray`), `input-group` |
+| Start / end date | `calendar` + `popover` (`date-picker-with-presets` for **Today**), time via `input type="time"` |
+| Indefinitely | `checkbox` |
+| Time zone | `combobox` (`command` + `popover`) |
+| Confirmations | `alert-dialog` |
+| Campaign table, phase badges | `table`, `badge`, `dropdown-menu` for row actions |
+| Landing list paging | `pagination` |
+| Description | Tiptap (not in the shadcn registry) |
 
-This ends ADR 0002's "no Radix" rule. All of it is admin-only, so the cached public page doesn't grow. Write ADR 0004 when building, and add `components.json` so the shadcn CLI installs items instead of copy-paste.
+These bring in Radix and `react-day-picker`, ending ADR 0002's "no Radix" rule. Everything except `pagination` and badges is admin-only, so the public bundle barely grows. ADR 0004 records this; add `components.json` so the shadcn CLI installs items.
+
+### 2.11 Demo Mode
+
+- Seed data has 6 campaigns covering every phase (one featured, two live, one scheduled, one achieved, one closed) so the landing page and badges are all visible.
+- All admin forms and dialogs work up to the final action, which shows the Demo Mode toast; APIs return 403 before touching Firestore.
 
 ## 3. Dashboard metrics
 
-### 3.1 What can be collected, and from where
+### 3.1 What is collected, and from where
 
-| Metric | Source | Exists? | How |
-|---|---|---|---|
-| Signatures per bucket, cumulative, gain vs previous period | Firestore | add | Daily rollup doc written in the signing transaction (§3.3) |
-| Comments | Firestore | same as signatures | Every signature is a comment here, so show one number |
-| Progress to goal, milestones reached and when | Firestore | add | `signatureCount` vs `goal`; reached date = first day the cumulative series passes the milestone |
-| Pace to goal | derived | add | Needed per day = remaining ÷ days left (only with an end date); projected finish = remaining ÷ 7-day average |
-| Page views, unique visitors, sessions | PostHog | partial | HogQL on `events` (already used) |
-| Bounce rate, session length | PostHog | add | HogQL `sessions` table (`$is_bounce`, `$session_duration`) |
-| New vs returning visitors | PostHog | add | Person first seen before the period start |
-| Conversion (visitors → signers) | PostHog + Firestore | add | Signatures ÷ unique visitors for the same period |
-| Sign funnel: view → started → code sent → verified → signed | PostHog | add | Custom events `sign_started`, `code_requested`, `code_verified`, `signature_submitted`; no personal data in properties |
-| Referrers, UTM source / campaign | PostHog | partial | `$referring_domain`, `utm_*` |
-| Share channel clicks (WhatsApp, X, copy link…) | PostHog | add | `share_clicked {channel}` in `ShareButtons` |
-| Countries, devices, browsers | PostHog | add | `$geoip_country_code`, `$device_type`, `$browser` |
-| Sign-in codes sent per provider vs daily cap | Upstash | yes | `mail:{provider}:{date}` counters already exist |
-| Email bounces / delivery | provider | no | Needs Brevo/Resend webhooks; later, live mode only |
-| Rate-limit blocks | Upstash | add | `INCR metric:{date}:rl:{limiter}` on every 429 |
-| Turnstile failures, honeypot hits | Upstash | add | Same counter pattern in `POST /api/comments` and `/api/auth/code` |
+| Metric | Source | How |
+|---|---|---|
+| Signatures per bucket, cumulative, gain vs previous period | Firestore | Hourly rollup written in the signing transaction (§3.3) |
+| Comments | Firestore | Same as signatures (every signature is a comment) |
+| Progress, milestones reached and when, Achieved date | Firestore | `signatureCount`, `goal`, rollups, `goalReachedAt` |
+| Pace to goal | derived | Needed per day = remaining ÷ days left (with an end date); projected finish = remaining ÷ 7-day average |
+| Page views, unique visitors, sessions, bounce rate, session length | PostHog → Firestore | HogQL on `events` and `sessions` (`$is_bounce`, `$session_duration`), copied daily |
+| New vs returning visitors | PostHog → Firestore | Person first seen before the day |
+| Conversion (visitors → signers) | derived | Signatures ÷ unique visitors, same period and campaign |
+| Sign funnel: view → started → code sent → verified → signed | PostHog | Custom events with a `campaign` property; no personal data |
+| Referrers, UTM, share channel clicks | PostHog → Firestore | `$referring_domain`, `utm_*`, `share_clicked {channel}` |
+| Countries, devices, browsers | PostHog → Firestore | `$geoip_country_code`, `$device_type`, `$browser` |
+| Sign-in codes sent per provider vs daily cap | Upstash | Existing `mail:{provider}:{date}` counters |
+| Rate-limit blocks, Turnstile failures, honeypot hits | Upstash | `INCR metric:{date}:{name}` on each event |
 
-Vercel Web Analytics overlaps with PostHog and isn't needed.
+The campaign selector at the top includes **All campaigns** (sums across campaigns).
 
-### 3.2 Time ranges and granularity
+### 3.2 Ranges
 
-"24h" and "1D" are the same, so keep one. Recommended presets:
+24h and 1D are the same, so 1D is dropped.
 
-| Range | Bucket | Points | Compared with |
-|---|---|---|---|
-| 24h | 1 hour | 24 | previous 24 h |
-| 3D | 3 hours | 24 | previous 3 days |
-| 7D | 6 hours | 28 | previous 7 days |
-| 30D | 1 day | 30 | previous 30 days |
-| 3M | 1 day | ~90 | previous 3 months |
-| 6M | 1 week | 26 | previous 6 months |
-| 1Y | 1 week | 52 | previous year |
-| All | 1 month (1 week if under 6 months) | varies | none |
+| Range | Bucket | Points | Compared with | Data |
+|---|---|---|---|---|
+| 24h | 1 hour | 24 | previous 24 h | signatures: rollups · traffic: PostHog live |
+| 3D | 3 hours | 24 | previous 3 days | same |
+| 7D | 6 hours | 28 | previous 7 days | same |
+| 30D | 1 day | 30 | previous 30 days | Firestore rollups only |
+| 3M | 1 day | ~90 | previous 3 months | Firestore |
+| 6M | 1 week | 26 | previous 6 months | Firestore |
+| 1Y | 1 week | 52 | previous year | Firestore |
+| All | 1 month (1 week if < 6 months) | varies | none | Firestore |
 
-Rules:
+Rules: buckets in the selected campaign's time zone (All campaigns: the admin's zone); weeks start Monday; the partial current bucket is drawn lighter and left out of the delta; delta shows `+12.4% (+318)` with an arrow and up/down text, never color alone; previous 0 → "new"; comparison hidden when no full previous period exists; default 7D; range kept in the URL (`?range=30d`).
 
-- Buckets in the campaign's time zone (WIB by default), so "today" matches the admin's wall clock. Weeks start Monday.
-- The current bucket is partial: draw it lighter and leave it out of the delta.
-- Delta = this period vs the previous period of the same length, shown as `+12.4% (+318)` with an arrow and the words up/down, never color alone. When the previous period is 0, show "new" instead of a percentage.
-- Ranges longer than the campaign are clipped to its start; the comparison is hidden when no full previous period exists.
-- Default view 7D. The range lives in the URL (`?range=30d`) so links reproduce the view.
+### 3.3 Storage — the efficient way (answer to Q8)
 
-### 3.3 Storage and cost
+Everything the dashboard draws for 30D and longer comes from **one small Firestore doc per campaign per UTC day**. PostHog is only asked live for the last 7 days (fresh, hourly), plus one batch query a day.
 
-**Signatures: Firestore daily rollups, written with the signature.** In the existing transaction in `POST /api/comments`, add:
-
-```ts
-tx.set(petition.collection("daily").doc("2026-11-02"),
-  { signatures: FieldValue.increment(1), [`h.${hour}`]: FieldValue.increment(1) }, { merge: true });
+```
+petitions/{slug}/daily/{YYYY-MM-DD}   // UTC day
+{
+  sig: number, sigH: number[24],                          // written in the signing transaction
+  views: number, visitors: number, sessions: number,      // written by the nightly job
+  bounces: number, durationSum: number, newVisitors: number,
+  referrers: Record<string, number>, countries: Record<string, number>,
+  devices: Record<string, number>, shares: Record<string, number>,   // top 10 each + "other"
+  funnel: { started: number, codeSent: number, verified: number },
+}
 ```
 
-One doc per day holds the day total and 24 hourly buckets. 1Y reads at most 366 small docs; coarser buckets are summed in code.
+- **Signatures**: the signing transaction adds `sig +1` and `sigH[hour] +1` (one extra write per signature; 4 instead of 3).
+- **Traffic**: a **Vercel Cron job once a day** (Hobby allows daily) calls `/api/cron/rollup` with `CRON_SECRET`. It runs **one** HogQL query for yesterday grouped by campaign path and hour, plus one for the breakdowns, and writes one doc per campaign. The first run backfills all history PostHog still has. After that PostHog retention no longer matters: Firestore keeps the history forever.
+- **Why UTC days with hourly signature buckets**: a campaign's time zone can change later. Re-bucketing UTC hours into any zone works at hour precision (half-hour zones such as India are shifted by 30 minutes; acceptable for charts).
+- **Unique visitors don't add up across days.** Long ranges show the "sum of daily visitors" labelled as such; exact uniques are only shown for ≤ 7D, where PostHog is queried live.
 
-| | Per signature | Per dashboard load (1Y) | Spark free tier |
-|---|---|---|---|
-| Writes | 4 instead of 3 | 0 | 20,000/day |
-| Reads | — | ≤ 366, cached 5 min | 50,000/day |
+Cost on free tiers:
 
-The alternative, a Firestore `count()` per bucket on `signers` by `createdAt`, adds no write but needs up to 52 queries per chart. Rollups are simpler and cheaper.
+| | Per day | Free limit |
+|---|---|---|
+| PostHog query API | ~2 (cron) + live 24h/3D/7D queries cached 10–60 min | 120 per hour, organisation-wide |
+| Firestore writes | 1 per signature + 1 per campaign (cron) | 20,000/day |
+| Firestore reads per dashboard load | ≤ 366 per campaign for 1Y, cached 5 min per (campaign, range) | 50,000/day |
+| Vercel Cron | 1 job, daily | Hobby: daily jobs allowed |
 
-**Traffic: PostHog HogQL, cached hard.** PostHog's API docs list the query endpoint at **120 requests per hour for the whole organisation**. So:
-
-- One HogQL query per range returns all bucketed series (`toStartOfInterval(timestamp, INTERVAL n HOUR, 'Asia/Jakarta')` with `countIf` per metric), over a window twice as long so the previous period comes back in the same call. A second query returns the breakdowns (referrer, country, device, share channel).
-- Cache per (campaign, range): 10 min for 24h/3D, 1 h for 7D–3M, 6 h for 6M and longer. That stays well under the limit with several admins.
-- On error or a missing key, fall back to sample data (current behaviour) and badge it "sample".
-- PostHog's free tier is 1M events a month; page views plus five funnel events stay far below that here. Confirm the free plan's data retention before promising a multi-year "All" range for traffic; signature history comes from Firestore and is unaffected.
-
-**Security counters: Upstash** `metric:{date}:{name}` with a 400-day TTL, read with one `MGET` per range.
+"All campaigns" + "All" range: add a `monthly/{YYYY-MM}` summary doc written by the same cron, so long ranges across many campaigns stay at a few dozen reads.
 
 ### 3.4 Dashboard layout and charts
 
-One filter row at the top: campaign select, then the range control (ToggleGroup on desktop, Select on mobile, the same pattern as shadcn's `chart-area-interactive`). Every card below follows that one range.
+One filter row at the top: campaign select, then the range control (ToggleGroup on desktop, Select on mobile, like shadcn `chart-area-interactive`). Every card follows that one range.
 
-1. **KPI row (stat tiles, not charts):** signatures in period, unique visitors, conversion %, progress to goal. Each tile: value, delta vs previous period with arrow and text, tiny sparkline. Pattern: `section-cards` in `dashboard-01`.
-2. **Signatures over time:** single-series area chart; previous period as a muted dashed line on the same axis (same measure, so one axis is valid). Toggle per-bucket / cumulative. In cumulative mode, milestones and the goal are horizontal reference lines with direct labels.
-3. **Pace card:** meter for progress to goal plus "need 312/day, averaging 280/day, projected 14 Dec". With Indefinitely, only the projected date.
-4. **Visitors and sessions:** line chart with two series (legend and direct labels). Bounce rate and median session length as stat tiles beside it, not on a second y-axis.
-5. **Funnel:** horizontal bars view → started → code sent → verified → signed, with step-to-step %.
-6. **Breakdowns:** ranked horizontal bars in one hue for referrers, share channels, countries, devices; top 6 + "Other".
-7. **Health (live mode):** codes sent per provider as meters against daily caps; rate-limit blocks, Turnstile failures and honeypot hits as small stat tiles with deltas.
+1. **KPI tiles:** signatures in period, unique visitors, conversion %, progress to goal; each with delta vs previous period and a sparkline (`section-cards` pattern from `dashboard-01`).
+2. **Signatures over time:** area chart, previous period as a muted dashed line on the same axis. Per-bucket / cumulative toggle; cumulative mode draws milestones and goal as labelled reference lines.
+3. **Pace card:** progress meter and "need 312/day, averaging 280/day, projected 14 Dec" (projected date only for Indefinitely).
+4. **Visitors and sessions:** two-series line chart; bounce rate and median session length as tiles beside it, never a second y-axis.
+5. **Funnel:** horizontal bars view → started → code sent → verified → signed, with step %.
+6. **Breakdowns:** ranked bars in one hue for referrers, share channels, countries, devices; top 6 + Other.
+7. **Health (live mode):** codes sent per provider against daily caps; rate-limit blocks, Turnstile failures, honeypot hits as tiles with deltas.
+8. **Campaign comparison (All campaigns view):** table of campaigns with signatures in period, delta, conversion and phase.
 
-Chart rules for the build: one y-axis per chart; categorical colors assigned per entity in a fixed order, never by rank; 2 px lines; hover crosshair and tooltip on every line and area; a "View as table" toggle per chart; dark-mode colors chosen and validated separately against the dark card surface; when the range changes, keep the old chart at reduced opacity while loading instead of a skeleton.
-
-Charts use shadcn `chart` (Recharts 3.8 with `ChartContainer` / `ChartTooltip`). Add `--chart-1…5` tokens to `globals.css`. The theme is monochrome, so the main series can stay neutral, but up/down deltas need a validated color pair. Load the chart cards with `next/dynamic` so Recharts stays out of every other bundle.
+Chart rules: one y-axis per chart; categorical colors assigned per entity in a fixed order, never by rank; 2 px lines; hover crosshair and tooltip everywhere; "View as table" per chart; dark-mode colors validated separately; old chart kept at reduced opacity while a new range loads. Charts use shadcn `chart` (Recharts 3.8), loaded with `next/dynamic` so Recharts stays out of other bundles. Add `--chart-1…5` tokens.
 
 ### 3.5 Demo Mode
 
-Demo writes nothing, so the rollups would be flat. Generate a deterministic sample series from the seed (fixed seed, growth curve ending at 8,452 signatures, weekly rhythm, one share spike) for every range, and badge those cards "sample data". Traffic stays real PostHog data when the key is set (it is on the live demo), sample otherwise.
+Generate deterministic sample rollups from the seed (fixed seed, growth curves ending at each seed campaign's count, weekly rhythm, one share spike) for every range, badged "sample data". Traffic for ≤ 7D stays real PostHog when the key is set.
 
-## 4. Recommended plan and task breakdown
+## 4. Task breakdown
 
-The model and phase logic unblock both features, so they go first.
+Ordered; each row is one PR (≤ ~400 lines).
 
-| # | Task | Tier | Notes |
-|---|---|---|---|
-| 1 | ADR 0004 (multi-campaign, Radix and Recharts in admin) and `components.json` | S | docs |
-| 2 | Campaign type, Zod schema, `campaignPhase()`, day ↔ UTC helpers with tests; seed with 4 phases | M | `@date-fns/tz` |
-| 3 | `/c/[slug]` route, featured campaign on `/`, client phase banner, server rejects signing outside the live window | M | keeps `PETITION_ID` fallback |
-| 4a | Admin campaign list and `POST/PATCH /api/admin/campaigns` (403 in Demo Mode) | M | |
-| 4b | Create / edit form: Field, Calendar, Popover, Checkbox, milestone array, preview, Demo Mode toast | M | Radix enters here |
-| 5 | Milestones on the public page (progress bar ticks, "next milestone") | S | |
-| 6 | QStash publish / close revalidation (live mode) | M | signature verification |
-| 7 | Daily rollup write in the signing transaction + range read API | M | |
-| 8 | PostHog custom events (sign funnel, share clicks) | S | client only |
-| 9 | Range model (presets, buckets, previous period, delta) with tests; HogQL query builder with caching | M | pure functions first |
-| 10a | Dashboard filter row and KPI tiles with deltas | M | |
-| 10b | Signatures chart with milestones, pace card | M | shadcn `chart` |
-| 11 | Traffic, funnel and breakdown cards | M | |
-| 12 | Health counters (rate-limit, Turnstile, honeypot) and provider quota meters | S | Upstash |
-| 13 | Demo sample series generator | S | |
+| # | Task | Tier |
+|---|---|---|
+| 1 | ADR 0004 (multi-campaign, Radix/Recharts/Tiptap in admin, landing page cache), `components.json`, chart tokens | S |
+| 2 | Campaign type, Zod schema (incl. Tiptap doc schema), `campaignPhase()`, wall-clock ↔ UTC helpers, milestone ladder generator, all with tests; seed with 6 campaigns | M |
+| 3 | `/c/[slug]` page: server-rendered rich description, phase banner + countdown, dimmed Achieved/Closed state, milestone ticks | M |
+| 4 | Signing enforces Live phase, sets `goalReachedAt`, writes hourly rollup (transaction + tests) | M |
+| 5 | Landing page `/`: featured, newest live, paginated list, index, `revalidate = 3600` | M |
+| 6 | Admin campaign list + API (`POST/PATCH/DELETE /api/admin/campaigns`, feature toggle, soft delete/restore, 403 in Demo Mode) | M |
+| 7 | Campaign form part 1: Field layout, title/subtitle/goal, dates + times + Today + Indefinitely, time-zone Combobox | M |
+| 8 | Campaign form part 2: Tiptap editor, milestone rows + Generate, preview | M |
+| 9 | Confirm dialogs: publish, live start-date change, delete with typed slug | S |
+| 10 | PostHog custom events with `campaign` property (sign funnel, share clicks) | S |
+| 11 | Nightly rollup cron (PostHog → Firestore daily + monthly docs, backfill, `CRON_SECRET`) | M |
+| 12 | Range model (presets, buckets, time-zone re-bucketing, previous period, delta) with tests; live HogQL for ≤ 7D with caching | M |
+| 13 | Dashboard: filter row, KPI tiles, signatures chart with milestones, pace card | M |
+| 14 | Dashboard: traffic, funnel, breakdowns, campaign comparison | M |
+| 15 | Health counters (rate-limit, Turnstile, honeypot) and provider quota meters | S |
+| 16 | Demo sample rollup generator | S |
 
-Totals: 10 M, 5 S, no L after splitting. Suggested order: **Campaigns** (1–5), then **Metrics** (7–13); 6 waits for go-live.
+Totals: 11 M, 5 S. Order: Campaigns 1–9 (the public site works with many campaigns after 5), then Metrics 10–16. Task 10 can ship early so funnel data starts accumulating.
 
-## 5. Open questions
+## 5. Remaining assumptions to confirm while building
 
-1. **Several live campaigns at once?** If yes, what does `/` show: the newest live one, one you mark as featured, or a list?
-2. **Milestones:** signature thresholds with a label (e.g. 5,000 → "Delivered to council") as assumed, or dated events / progress updates?
-3. **Description format:** plain text with paragraphs (assumed), or Markdown (bold, links, lists)?
-4. **Time zone:** WIB for everything, or per campaign? Are whole days enough, or is a start/end time needed?
-5. **Scheduled campaigns:** must their text stay hidden until the start date (needs task 6), or is a visible "Opens in 3 days" fine?
-6. **After the end date:** keep the page up as "Closed" with the final count (assumed), or hide it?
-7. **Editing a live campaign:** goal and end date editable, start date locked once live (assumed)?
-8. **Ranges:** are the presets in §3.2 right, and should "All" for traffic go beyond PostHog's retention or show signatures only?
+- Reaching the goal before the end date closes signing (Achieved). If you'd rather let it keep collecting past 100%, it is a one-line change in `campaignPhase()`.
+- One featured campaign at a time.
+- Soft delete with restore; permanent purge is a separate, later action.
 
 ## Sources
 
-- shadcn registry, new-york-v4 style, fetched 2026-11-02 from `ui.shadcn.com/r`: `chart` (recharts 3.8.0), `calendar` (react-day-picker), `field`, `form-rhf-array`, `date-picker-with-presets`, `chart-area-interactive`, `dashboard-01`.
-- PostHog API docs, rate limits (query endpoint 120/hour, organisation-wide): https://www.posthog.com/docs/api. Pricing and retention pages could not be fetched; confirm retention before relying on it.
+- shadcn registry, new-york-v4, fetched 2026-11-02 from `ui.shadcn.com/r`: `chart` (recharts 3.8.0), `calendar`, `field`, `form-rhf-array`, `date-picker-with-presets`, `combobox`, `alert-dialog`, `chart-area-interactive`, `dashboard-01`. No editor item in the official registry.
+- npm, 2026-11-02: `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/static-renderer` 3.32.2 (MIT); `platejs` 53.5.2 (MIT); `@date-fns/tz` 1.5.0 (MIT).
+- PostHog API docs, rate limits (query endpoint 120/hour, organisation-wide): https://www.posthog.com/docs/api.
 - Repo: `src/lib/petition.ts`, `src/app/api/comments/route.ts`, `src/lib/server/posthog.ts`, `src/lib/server/ratelimit.ts`, `src/lib/server/email.ts`, ADR 0001, ADR 0002.
