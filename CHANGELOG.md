@@ -23,6 +23,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Dashboard range model: 24h, 3D, 7D, 30D, 3M, 6M, 1Y and All with buckets in the campaign time zone (weeks from Monday), a previous period of equal length, and deltas that leave out the partial current bucket.
 - Analytics events for the dashboard funnel: sign_started, code_sent, code_verified, signed and share_clicked (whatsapp, x, copy, native), each with the campaign slug and no personal data; nothing is sent when PostHog is not configured.
 - Confirm dialogs: publishing a draft, moving the start of a live campaign (says whether signing closes until then), and deleting a campaign, which needs its link typed in; in Demo Mode the dialogs work and the final button shows the Demo Mode message.
 - Campaign form: Tiptap rich text description (headings, emphasis, lists, quotes, safe links only) with a preview rendered by the public renderer, and milestone rows with add, remove and Generate up to goal; the editor loads only in the admin form.
