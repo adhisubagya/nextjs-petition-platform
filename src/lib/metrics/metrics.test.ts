@@ -88,3 +88,31 @@ describe("metrics API in Demo Mode", async () => {
     expect(all).toMatchObject({ range: "7d", timeZone: "UTC" });
   });
 });
+
+describe("chart helpers", async () => {
+  const { bucketLabel, deltaText, seriesRows } = await import("./chart");
+  const H = 3_600_000;
+  const t0 = Date.parse("2026-11-03T17:00:00Z"); // 00:00 next day in Jakarta
+
+  it("labels buckets in the campaign's zone", () => {
+    expect(bucketLabel(t0, "hour", "Asia/Jakarta")).toBe("00:00");
+    expect(bucketLabel(t0, "day", "Asia/Jakarta")).toBe("4 Nov");
+    expect(bucketLabel(t0, "hour", "Asia/Jakarta", true)).toBe("Wed 00:00");
+  });
+
+  it("builds per-bucket and cumulative rows", () => {
+    const s = { buckets: [2, 3], prev: [1, 0], current: 5, previous: 1, delta: null, before: 10 };
+    const per = seriesRows(s, [t0, t0 + H], "hour", "UTC");
+    expect(per.map((r) => [r.current, r.previous])).toEqual([[2, 1], [3, 0]]);
+    const cum = seriesRows(s, [t0, t0 + H], "hour", "UTC", true);
+    expect(cum.map((r) => [r.current, r.previous])).toEqual([[12, null], [15, null]]);
+  });
+
+  it("writes deltas as text with a direction", () => {
+    expect(deltaText(null)).toBeNull();
+    expect(deltaText({ abs: 5, pct: null, isNew: true })).toEqual({ text: "New", dir: "up" });
+    expect(deltaText({ abs: 0, pct: 0, isNew: false })).toEqual({ text: "No change", dir: "flat" });
+    expect(deltaText({ abs: -20, pct: -12.34, isNew: false })).toEqual({ text: "−12%", dir: "down" });
+    expect(deltaText({ abs: 3, pct: 4.56, isNew: false })).toEqual({ text: "+4.6%", dir: "up" });
+  });
+});
