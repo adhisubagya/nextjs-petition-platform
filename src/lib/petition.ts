@@ -78,47 +78,29 @@ function summary(c: Campaign): CampaignSummary {
   return s as CampaignSummary;
 }
 
-const published = () =>
-  adminDb().collection("petitions").where("status", "==", "published").where("deletedAt", "==", null);
-
-const visibleFallback = () =>
-  fallbackCampaigns.filter((c) => campaignPhase(c) !== "draft").sort((a, b) => b.startAt.localeCompare(a.startAt));
+// shortcut: reads the whole collection and filters in memory, so no composite index or field backfill is needed
+// and pre-campaign docs still show. Fine for tens of campaigns (hourly ISR); switch to an indexed query past a few hundred.
+async function visibleCampaigns(): Promise<Campaign[]> {
+  const all = isFirebaseAdminConfigured
+    ? (await adminDb().collection("petitions").get()).docs.map((d) => toCampaign(d.id, d.data()))
+    : fallbackCampaigns;
+  return all.filter((c) => campaignPhase(c) !== "draft").sort((a, b) => b.startAt.localeCompare(a.startAt));
+}
 
 /** Public campaigns, newest start first. The cursor is the last slug of the previous page. */
 export async function listCampaigns(after: string | null = null): Promise<CampaignPage> {
-  if (!isFirebaseAdminConfigured) {
-    const all = visibleFallback();
-    const start = after ? all.findIndex((c) => c.slug === after) + 1 : 0;
-    const page = all.slice(start, start + CAMPAIGN_PAGE_SIZE);
-    return { campaigns: page.map(summary), nextCursor: start + CAMPAIGN_PAGE_SIZE < all.length ? page.at(-1)!.slug : null };
-  }
-  let query = published().orderBy("startAt", "desc").limit(CAMPAIGN_PAGE_SIZE + 1);
-  if (after) {
-    const last = await adminDb().collection("petitions").doc(after).get();
-    if (last.exists) query = query.startAfter(last);
-  }
-  const docs = (await query.get()).docs;
-  const campaigns = docs.slice(0, CAMPAIGN_PAGE_SIZE).map((d) => summary(toCampaign(d.id, d.data())));
-  return { campaigns, nextCursor: docs.length > CAMPAIGN_PAGE_SIZE ? campaigns.at(-1)!.slug : null };
+  const all = await visibleCampaigns();
+  const start = after ? all.findIndex((c) => c.slug === after) + 1 : 0;
+  const page = all.slice(start, start + CAMPAIGN_PAGE_SIZE);
+  return { campaigns: page.map(summary), nextCursor: start + CAMPAIGN_PAGE_SIZE < all.length ? page.at(-1)!.slug : null };
 }
 
 /** The featured campaign (at most one is flagged) and the newest one that is live right now. */
 export async function getHighlights(now = Date.now()): Promise<{ featured: Campaign | null; newestLive: Campaign | null }> {
-  if (!isFirebaseAdminConfigured) {
-    const all = visibleFallback();
-    return {
-      featured: all.find((c) => c.featured) ?? null,
-      newestLive: all.find((c) => campaignPhase(c, now) === "live") ?? null,
-    };
-  }
-  const [featured, started] = await Promise.all([
-    published().where("featured", "==", true).limit(1).get(),
-    published().where("startAt", "<=", new Date(now)).orderBy("startAt", "desc").limit(10).get(),
-  ]);
-  const toC = (d: DocumentSnapshot) => toCampaign(d.id, d.data()!);
+  const all = await visibleCampaigns();
   return {
-    featured: featured.empty ? null : toC(featured.docs[0]),
-    newestLive: started.docs.map(toC).find((c) => campaignPhase(c, now) === "live") ?? null,
+    featured: all.find((c) => c.featured) ?? null,
+    newestLive: all.find((c) => campaignPhase(c, now) === "live") ?? null,
   };
 }
 
