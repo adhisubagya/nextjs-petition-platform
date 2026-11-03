@@ -2,14 +2,16 @@ import type { NextConfig } from "next";
 
 // Report-only until a clean week of reports, then set CSP_ENFORCE=true at build time; the static 24h-cached page cannot carry per-request nonces,
 // so scripts keep 'unsafe-inline' for Next.js's inline bootstrap.
+// Google sign-in (live): Firebase loads gapi from apis.google.com and frames its auth handler on the authDomain.
+const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://*.posthog.com",
+  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://*.posthog.com https://apis.google.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://firebasestorage.googleapis.com",
   "font-src 'self'",
   "connect-src 'self' https://*.posthog.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebasestorage.googleapis.com",
-  "frame-src https://challenges.cloudflare.com",
+  `frame-src https://challenges.cloudflare.com${authDomain ? ` https://${authDomain}` : ""}`,
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",
