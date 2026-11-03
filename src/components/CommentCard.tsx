@@ -1,19 +1,13 @@
 import { formatDistanceToNow } from "date-fns";
-import { Pin, UserRound } from "lucide-react";
+import { Pin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Comment } from "@/lib/types";
+import { SignerAvatar } from "./SignerAvatar";
 
 export function CommentCard({ comment }: { comment: Comment }) {
   return (
     <li className="flex gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-accent/40">
-      {comment.avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- ~50KB avatars from Storage; no optimisation needed
-        <img src={comment.avatarUrl} alt="" className="size-10 shrink-0 rounded-full object-cover ring-1 ring-border" />
-      ) : (
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted ring-1 ring-border">
-          <UserRound className="size-5 text-muted-foreground" aria-hidden />
-        </span>
-      )}
+      <SignerAvatar name={comment.name} avatarUrl={comment.avatarUrl} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <span className="font-semibold">{comment.name}</span>
