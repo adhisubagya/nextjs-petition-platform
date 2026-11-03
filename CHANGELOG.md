@@ -4,6 +4,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+## [0.1.0-alpha.1] - 2026-11-03
+
 ### Security
 
 - The Master account is invisible to other admins: /admin/developer is a 404 for everyone else (signed out included), the settings API only reports the role to the Master account itself, and switched-off actions say "Not available for this account." without naming it.
