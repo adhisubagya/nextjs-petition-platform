@@ -3,7 +3,7 @@ import { DeveloperSettings } from "@/components/admin/DeveloperSettings";
 
 export default function DeveloperPage() {
   return (
-    <AdminGate>
+    <AdminGate hidden>
       <DeveloperSettings />
     </AdminGate>
   );

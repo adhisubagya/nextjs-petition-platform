@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Security
 
+- The Master account is invisible to other admins: /admin/developer is a 404 for everyone else (signed out included), the settings API only reports the role to the Master account itself, and switched-off actions say "Not available for this account." without naming it.
 - Firestore rules hide draft and soft-deleted campaigns from client reads; `signers/` and `daily/` stay server-only.
 - Signing is refused (403) outside a campaign's Live window, for drafts, deleted and unknown campaigns, checked inside the signing transaction on the server clock; Demo Mode answers follow the same window. The signature that reaches the goal records `goalReachedAt` once, signing stays open past the goal, and each signature adds to a per-day, per-hour rollup.
 - Live mode (still off): only accounts from email-code sign-in can sign or upload avatars (custom `signer` claim), signer uids are keyed with `SIGNER_ID_SECRET` so avatar paths don't reveal emails, sign-in codes are capped at 5 per email per day, and avatars must be WebP, PNG or JPEG.

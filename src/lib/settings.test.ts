@@ -7,7 +7,7 @@ describe("blocked", () => {
   });
   it("applies switches to admins but not developers", () => {
     const s = { mode: "multiple" as const, disabled: ["edit" as const] };
-    expect(blocked(s, "edit", false)).toBe("Turned off by the Master account.");
+    expect(blocked(s, "edit", false)).toBe("Not available for this account.");
     expect(blocked(s, "edit", true)).toBeNull();
     expect(blocked(s, "goal", false)).toBeNull();
   });
