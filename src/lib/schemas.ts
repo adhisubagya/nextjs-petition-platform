@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isTinyAvatar } from "@/lib/tiny-avatar";
+import { AVATAR_PRESET_HUES, isGooglePhoto, isTinyAvatar } from "@/lib/tiny-avatar";
 
 export const NAME_MAX = 40;
 export const MESSAGE_MAX = 500;
@@ -24,8 +24,14 @@ export const commentFieldsSchema = z.object({
   message: messageSchema,
   // Checked by default: the public comment then shows only "Anonymous".
   anonymous: z.boolean().default(true),
-  // Tiny inline avatar (src/lib/tiny-avatar.ts); no Storage URLs.
-  avatarUrl: z.string().refine(isTinyAvatar, "Avatar must be a small WebP, PNG or JPEG").nullable().default(null),
+  // Tiny inline image or the signer's Google photo (src/lib/tiny-avatar.ts); no Storage URLs.
+  avatarUrl: z
+    .string()
+    .refine((v) => isTinyAvatar(v) || isGooglePhoto(v), "Avatar must be a small WebP, PNG or JPEG")
+    .nullable()
+    .default(null),
+  // Colour for the initials avatar when there is no image; null = colour from the name.
+  avatarPreset: z.number().int().min(0).max(AVATAR_PRESET_HUES.length - 1).nullable().default(null),
 });
 
 type Fields = { name: string; anonymous: boolean };

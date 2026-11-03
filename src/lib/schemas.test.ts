@@ -5,7 +5,7 @@ const valid = { name: "Signer", message: "I support this.", anonymous: false, tu
 
 describe("commentRequestSchema", () => {
   it("accepts a valid comment and defaults avatarUrl", () => {
-    expect(commentRequestSchema.parse(valid)).toEqual({ ...valid, avatarUrl: null });
+    expect(commentRequestSchema.parse(valid)).toEqual({ ...valid, avatarUrl: null, avatarPreset: null });
   });
   it("trims and rejects a blank comment", () => {
     expect(commentRequestSchema.safeParse({ ...valid, message: "   " }).success).toBe(false);

@@ -27,7 +27,7 @@ describe("POST /api/auth/google (live)", () => {
     verifyIdToken.mockResolvedValue({ uid: "g1", email: "alex@example.com", email_verified: true, firebase: { sign_in_provider: "google.com" } });
     const res = await call({ idToken: "t" });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, email: "alex@example.com", token: `custom:${uidFor("alex@example.com")}` });
+    expect(await res.json()).toEqual({ ok: true, email: "alex@example.com", photo: null, token: `custom:${uidFor("alex@example.com")}` });
     expect(deleteUser).toHaveBeenCalledWith("g1");
   });
 

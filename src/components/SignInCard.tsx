@@ -20,7 +20,7 @@ async function post(path: string, body: unknown) {
 }
 
 /** Email → 6-digit code. In Demo Mode the server returns the code instead of emailing it. */
-export function SignInCard({ onSignedIn }: { onSignedIn: (email: string) => void }) {
+export function SignInCard({ onSignedIn }: { onSignedIn: (email: string, photo?: string | null) => void }) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"email" | "code">("email");

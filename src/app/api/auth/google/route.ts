@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
 
   const google = await verifyGoogleToken(parsed.data.idToken);
   if (!google) return NextResponse.json({ error: "Google sign-in failed. Try again or use your email." }, { status: 401 });
-  const token = await customTokenFor(google.email);
+  const token = await customTokenFor(google.email, google.photo);
   // Best effort: a leftover Google user is harmless, so a cleanup failure must not block signing.
   await deleteAuthUser(google.uid).catch((e) => console.error("google user cleanup failed", e));
-  return NextResponse.json({ ok: true, email: google.email, token });
+  return NextResponse.json({ ok: true, email: google.email, photo: google.photo, token });
 }

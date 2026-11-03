@@ -35,8 +35,13 @@ vi.mock("firebase-admin/firestore", () => ({
   FieldValue: { increment: (operand: number) => ({ operand }), serverTimestamp: () => "now" },
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/server/signer-auth", () => ({
-  signerUid: async (req: Request) => req.headers.get("authorization")?.replace(/^Bearer /, "") || null,
+// Bearer "<uid>" or "<uid>|<google photo>"; the real ownAvatar check runs.
+vi.mock("@/lib/server/signer-auth", async () => ({
+  ownAvatar: (await vi.importActual<typeof import("@/lib/server/signer-auth")>("@/lib/server/signer-auth")).ownAvatar,
+  signerClaims: async (req: Request) => {
+    const [uid, photo = null] = (req.headers.get("authorization")?.replace(/^Bearer /, "") ?? "").split("|");
+    return uid ? { uid, photo } : null;
+  },
 }));
 
 const { DELETE, GET, PATCH } = await import("./route");
@@ -73,6 +78,16 @@ describe("/api/comments/mine (live)", () => {
     expect(docs.get("petitions/default/comments/c2")).toMatchObject({ name: "Sam", message: "Mine" });
     expect((await PATCH(req("PATCH", "alex", { name: "", anonymous: false, message: "x" }))).status).toBe(400);
     expect((await PATCH(req("PATCH", "sam", { name: "Sam", anonymous: false, message: "hi" }))).status).toBe(404);
+  });
+
+  it("lets the signer pick their own Google photo, a colour or initials, never another URL", async () => {
+    const photo = "https://lh3.googleusercontent.com/a/alex=s96-c";
+    const body = { name: "Alex", anonymous: false, message: "Count me in" };
+    expect((await PATCH(req("PATCH", `alex|${photo}`, { ...body, avatarUrl: photo }))).status).toBe(200);
+    expect(docs.get("petitions/default/comments/c1")).toMatchObject({ avatarUrl: photo, avatarPreset: null });
+    expect((await PATCH(req("PATCH", "alex", { ...body, avatarUrl: "https://lh3.googleusercontent.com/a/someone-else" }))).status).toBe(400);
+    expect((await PATCH(req("PATCH", `alex|${photo}`, { ...body, avatarUrl: null, avatarPreset: 2 }))).status).toBe(200);
+    expect(docs.get("petitions/default/comments/c1")).toMatchObject({ avatarUrl: null, avatarPreset: 2 });
   });
 
   it("deletes comment and signer doc and decrements the count once", async () => {

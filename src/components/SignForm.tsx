@@ -13,16 +13,17 @@ import { track } from "@/lib/analytics";
 import { DEMO_MODE } from "@/lib/demo";
 import { liveIdToken } from "@/lib/my-signature";
 import { commentFieldsSchema, MESSAGE_MAX, NAME_MAX, hasName, nameIssue } from "@/lib/schemas";
+import { AVATAR_UPLOADS } from "@/lib/tiny-avatar";
 import { siteKey } from "@/lib/turnstile";
 import type { Comment } from "@/lib/types";
 
-const formSchema = commentFieldsSchema.omit({ avatarUrl: true }).extend({ anonymous: z.boolean(), website: z.string() }).refine(hasName, nameIssue);
+const formSchema = commentFieldsSchema.omit({ avatarUrl: true, avatarPreset: true }).extend({ anonymous: z.boolean(), website: z.string() }).refine(hasName, nameIssue);
 type FormValues = z.infer<typeof formSchema>;
 
 
-type Props = { campaign: string; email: string; onSigned: (comment: Comment) => void; menu: ReactNode };
+type Props = { campaign: string; email: string; photo: string | null; onSigned: (comment: Comment) => void; menu: ReactNode };
 
-export function SignForm({ campaign, email, onSigned, menu }: Props) {
+export function SignForm({ campaign, email, photo, onSigned, menu }: Props) {
   const [token, setToken] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -37,7 +38,8 @@ export function SignForm({ campaign, email, onSigned, menu }: Props) {
     setStatus(null);
     try {
       // Loaded on demand so the compressor stays out of the first page load.
-      const avatarUrl = avatar ? await (await import("@/lib/avatar")).tinyAvatar(avatar) : null;
+      // A chosen image wins; otherwise the Google photo, if signed in with Google. Changeable later from the menu.
+      const avatarUrl = avatar ? await (await import("@/lib/avatar")).tinyAvatar(avatar) : photo;
       // Live mode: the API checks this Firebase ID token and allows one signature per account.
       const idToken = DEMO_MODE ? null : await liveIdToken();
       const res = await fetch("/api/comments", {
@@ -93,17 +95,20 @@ export function SignForm({ campaign, email, onSigned, menu }: Props) {
             <Textarea id="message" rows={3} maxLength={MESSAGE_MAX} placeholder="Why are you signing?" aria-invalid={!!errors.message} {...register("message")} />
             {errors.message && <p className="text-sm text-destructive">{errors.message.message}</p>}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="avatar">Avatar (optional)</Label>
-            <label
-              htmlFor="avatar"
-              className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent/50 has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50"
-            >
-              <ImagePlus className="size-4 shrink-0" aria-hidden />
-              <span className="truncate">{avatar ? avatar.name : "Choose an image"}</span>
-              <input id="avatar" type="file" accept="image/*" className="sr-only" onChange={(e) => setAvatar(e.target.files?.[0] ?? null)} />
-            </label>
-          </div>
+          {AVATAR_UPLOADS && (
+            <div className="space-y-2">
+              <Label htmlFor="avatar">Avatar (optional)</Label>
+              <label
+                htmlFor="avatar"
+                className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent/50 has-focus-visible:ring-[3px] has-focus-visible:ring-ring/50"
+              >
+                <ImagePlus className="size-4 shrink-0" aria-hidden />
+                <span className="truncate">{avatar ? avatar.name : "Choose an image"}</span>
+                <input id="avatar" type="file" accept="image/*" className="sr-only" onChange={(e) => setAvatar(e.target.files?.[0] ?? null)} />
+              </label>
+              {photo && !avatar && <p className="text-xs text-muted-foreground">Your Google photo is used unless you choose an image.</p>}
+            </div>
+          )}
           <Turnstile siteKey={siteKey} onSuccess={setToken} onExpire={() => setToken(null)} options={{ size: "flexible" }} />
           <HoldToSign onComplete={handleSubmit(onSubmit)} disabled={!token} busy={isSubmitting} />
           {status && <p role="status" className="text-center text-sm text-muted-foreground">{status}</p>}

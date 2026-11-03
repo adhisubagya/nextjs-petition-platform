@@ -19,7 +19,7 @@ function GoogleMark() {
 }
 
 /** Live mode: Google popup, then the server swaps the Google ID token for the signer token the email code gives. */
-async function liveGoogleSignIn(): Promise<string | null> {
+async function liveGoogleSignIn(): Promise<{ email: string; photo: string | null } | null> {
   const [{ GoogleAuthProvider, signInWithCustomToken, signInWithPopup }, { clientAuth }] = await Promise.all([
     import("firebase/auth"),
     import("@/lib/firebase/client"),
@@ -42,11 +42,11 @@ async function liveGoogleSignIn(): Promise<string | null> {
     throw new Error(data.error ?? "Something went wrong.");
   }
   await signInWithCustomToken(auth, data.token);
-  return data.email;
+  return { email: data.email, photo: data.photo ?? null };
 }
 
 /** "Continue with Google". Demo Mode: a simulated account chooser; nothing is sent to Google or Firebase. */
-export function GoogleSignIn({ onSignedIn }: { onSignedIn: (email: string) => void }) {
+export function GoogleSignIn({ onSignedIn }: { onSignedIn: (email: string, photo: string | null) => void }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,8 +56,8 @@ export function GoogleSignIn({ onSignedIn }: { onSignedIn: (email: string) => vo
     setBusy(true);
     setError(null);
     try {
-      const email = await liveGoogleSignIn();
-      if (email) pick(email);
+      const account = await liveGoogleSignIn();
+      if (account) pick(account.email, account.photo);
     } catch (e) {
       setError(e instanceof TypeError ? "Network error. Please try again." : (e as Error).message);
     } finally {
@@ -65,9 +65,9 @@ export function GoogleSignIn({ onSignedIn }: { onSignedIn: (email: string) => vo
     }
   }
 
-  const pick = (email: string) => {
+  const pick = (email: string, photo: string | null) => {
     track("code_verified", { method: "google" });
-    onSignedIn(email);
+    onSignedIn(email, photo);
   };
 
   return (
@@ -98,9 +98,9 @@ export function GoogleSignIn({ onSignedIn }: { onSignedIn: (email: string) => vo
                 <button
                   type="button"
                   className="flex w-full items-center gap-3 rounded-md p-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                  onClick={() => pick(a.email)}
+                  onClick={() => pick(a.email, a.photo)}
                 >
-                  <SignerAvatar name={a.name} avatarUrl={null} />
+                  <SignerAvatar name={a.name} avatarUrl={a.photo} />
                   <span className="min-w-0">
                     <span className="block font-medium">{a.name}</span>
                     <span className="block truncate text-muted-foreground">{a.email}</span>

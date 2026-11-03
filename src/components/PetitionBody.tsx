@@ -38,6 +38,7 @@ export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, chil
   const menu = signer && (
     <SignerMenu
       email={signer.email}
+      photo={signer.photo ?? null}
       comment={signedHere ? mine : null}
       onEdit={async (c) => {
         if (!DEMO_MODE) await mySignature.edit(campaign.slug, c);
@@ -72,13 +73,14 @@ export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, chil
         {phase !== "live" ? (
           <SigningClosed campaign={campaign} scheduled={phase === "scheduled"} />
         ) : !signer ? (
-          <SignInCard onSignedIn={(email) => (setMine(null), setSignedNow(false), signIn(email))} />
+          <SignInCard onSignedIn={(email, photo) => (setMine(null), setSignedNow(false), signIn(email, photo))} />
         ) : signedHere ? (
           <ShareCard title={campaign.title} url={shareUrl} alreadySigned={!signedNow} menu={menu} />
         ) : (
           <SignForm
             campaign={campaign.slug}
             email={signer.email}
+            photo={signer.photo ?? null}
             menu={menu}
             onSigned={(c) => {
               setAdded((prev) => [c, ...prev]);
