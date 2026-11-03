@@ -22,6 +22,7 @@ describe("seed data", () => {
     // The featured one is the single-campaign demo, so it must show the Achieved badge.
     expect(campaigns.filter((c) => c.featured).map((c) => c.slug)).toEqual(["default"]);
     for (const c of campaigns) {
+      expect(Date.parse(c.startAt) % 60_000).toBe(0);
       const input = {
         ...c,
         start: utcToWallClock(c.startAt, c.timeZone),

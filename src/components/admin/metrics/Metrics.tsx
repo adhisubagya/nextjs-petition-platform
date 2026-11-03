@@ -120,7 +120,7 @@ export function Metrics() {
           hint="Signatures ÷ visitors"
         />
         {d?.campaign ? (
-          <Tile label="Progress to goal" value={d.campaign.signatureCount} display={`${percent(d.campaign.signatureCount, d.campaign.goal)}%`} hint={`${fmt(d.campaign.signatureCount)} of ${fmt(d.campaign.goal)}`} />
+          <Tile label="Progress to goal" value={d.campaign.signatureCount} display={`${d.campaign.goal > 0 ? Math.round((d.campaign.signatureCount / d.campaign.goal) * 100) : 0}%`} hint={`${fmt(d.campaign.signatureCount)} of ${fmt(d.campaign.goal)}`} />
         ) : (
           <Tile label="Live campaigns" value={d?.comparison.filter((c) => c.phase === "live").length} hint={d && `${d.comparison.length} published`} />
         )}

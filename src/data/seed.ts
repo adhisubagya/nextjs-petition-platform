@@ -82,7 +82,8 @@ const campaignRows: Row[] = [
 
 /** Five campaigns covering every public state: live + achieved (featured), live + achieved, scheduled, ended + achieved, ended. */
 export function seedCampaigns(now = Date.now()): Campaign[] {
-  const iso = (days: number) => new Date(now + days * DAY).toISOString();
+  // Whole minutes, like the admin form, so saving an untouched seeded campaign doesn't count as moving its start.
+  const iso = (days: number) => new Date(Math.floor((now + days * DAY) / 60_000) * 60_000).toISOString();
   return campaignRows.map(([slug, title, subtitle, goal, signatureCount, start, end, featured, reached]) => ({
     slug,
     title,
