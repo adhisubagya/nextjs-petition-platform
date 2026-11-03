@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- One line under the progress bar with the three newest signers' avatars and "Latest: name, time ago", from comments already on the page (no extra reads). Hidden once the campaign ends.
 - "Continue with Google" for signers, above the email code. Demo Mode shows a simulated account chooser that writes nothing; signing in again as someone who already signed in this tab shows "You have already signed this petition." `NEXT_PUBLIC_GOOGLE_SIGNIN` switches it (default: on in Demo Mode, off in live).
 
 ## [0.1.0-alpha.1] - 2026-11-03

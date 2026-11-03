@@ -9,7 +9,7 @@ import type { CommentPage } from "@/lib/petition";
 import type { Comment } from "@/lib/types";
 import { formatInZone, usePhase } from "@/lib/use-phase";
 import { CommentList } from "./CommentList";
-import { ProgressBar } from "./ProgressBar";
+import { latestSigners, ProgressBar } from "./ProgressBar";
 import { ShareCard } from "./ShareCard";
 import { SignInCard } from "./SignInCard";
 import { SignForm } from "./SignForm";
@@ -31,6 +31,7 @@ export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, chil
         goal={campaign.goal}
         milestones={campaign.milestones}
         dimmed={phase === "ended"}
+        recent={latestSigners([...added, ...initialPage.comments])}
       />
       <div className="lg:sticky lg:top-20 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
         {phase !== "live" ? (
