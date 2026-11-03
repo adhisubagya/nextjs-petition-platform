@@ -7,9 +7,12 @@ import { blocked, type Capability } from "@/lib/settings";
 import { getSettings } from "./settings";
 
 const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+// Unset means nobody is Master (fail closed).
+const masterEmail = process.env.MASTER_EMAIL?.trim().toLowerCase() || null;
 
-export type Caller = { admin: boolean; developer: boolean };
-const NOBODY: Caller = { admin: false, developer: false };
+/** `uid` and `authTime` (seconds) are set for any verified token; `master` needs the developer claim and MASTER_EMAIL. */
+export type Caller = { admin: boolean; developer: boolean; master: boolean; uid?: string; authTime?: number };
+const NOBODY: Caller = { admin: false, developer: false, master: false };
 
 /**
  * Who sent the request. Email/password sign-up is open by default in Firebase, so a valid token alone is not enough:
@@ -17,14 +20,21 @@ const NOBODY: Caller = { admin: false, developer: false };
  * see scripts/developer.ts). A developer is always an admin.
  */
 export async function caller(req: Request): Promise<Caller> {
-  if (!isFirebaseAdminConfigured) return { admin: DEMO_MODE, developer: false }; // unconfigured demo deploy: sample data only, writes are refused anyway
+  if (!isFirebaseAdminConfigured) return { ...NOBODY, admin: DEMO_MODE }; // unconfigured demo deploy: sample data only, writes are refused anyway
   const token = req.headers.get("authorization")?.replace(/^Bearer /, "");
   if (!token) return NOBODY;
   try {
     adminDb(); // ensures the Admin app is initialised
-    const { email, developer } = await getAuth().verifyIdToken(token);
+    const { uid, email, developer, auth_time } = await getAuth().verifyIdToken(token);
     const dev = developer === true;
-    return { admin: dev || Boolean(email && adminEmails.includes(email.toLowerCase())), developer: dev };
+    const mail = email?.toLowerCase();
+    return {
+      admin: dev || Boolean(mail && adminEmails.includes(mail)),
+      developer: dev,
+      master: dev && masterEmail !== null && mail === masterEmail,
+      uid,
+      authTime: auth_time,
+    };
   } catch {
     return NOBODY;
   }
@@ -32,6 +42,7 @@ export async function caller(req: Request): Promise<Caller> {
 
 export const isAdmin = async (req: Request) => (await caller(req)).admin;
 export const isDeveloper = async (req: Request) => (await caller(req)).developer;
+export const isMaster = async (req: Request) => (await caller(req)).master;
 
 /** Admin route gate: 401 for non-admins, 403 when the capability is switched off or not in this mode, else null. */
 export async function guard(req: Request, cap: Capability): Promise<NextResponse | null> {
