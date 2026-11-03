@@ -2,6 +2,7 @@
 
 import { LogOut, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
@@ -14,8 +15,9 @@ type Props = {
   email: string;
   /** This signer's signature on the current campaign, when this view has it. */
   comment?: Comment | null;
-  onEdit: (comment: Comment) => void;
-  onDelete: () => void;
+  /** Rejects with a message the signer can read; the dialog stays open. */
+  onEdit: (comment: Comment) => Promise<void>;
+  onDelete: () => Promise<void>;
   onSignOut: () => void;
 };
 
@@ -27,8 +29,7 @@ export function SignerMenu({ email, comment, onEdit, onDelete, onSignOut }: Prop
   const menu = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // shortcut: edit and delete are Demo Mode only (React state) until the live signature API lands.
-  const canChange = DEMO_MODE && !!comment;
+  const canChange = !!comment;
 
   // Top layer has no anchor in all browsers yet, so place the menu under the avatar when it opens.
   function place(e: React.ToggleEvent<HTMLDivElement>) {
@@ -71,8 +72,11 @@ export function SignerMenu({ email, comment, onEdit, onDelete, onSignOut }: Prop
           </button>
         </div>
       </div>
-      {comment && <EditDialog key={comment.id} open={editing} comment={comment} onCancel={() => setEditing(false)} onSave={(c) => (setEditing(false), onEdit(c))} />}
-      <ConfirmDialog open={deleting} title="Delete your signature?" confirmLabel="Delete" destructive onCancel={() => setDeleting(false)} onConfirm={() => (setDeleting(false), onDelete())}>
+      {comment && <EditDialog key={comment.id} open={editing} comment={comment} onCancel={() => setEditing(false)} onSave={async (c) => (await onEdit(c), setEditing(false))} />}
+      <ConfirmDialog open={deleting} title="Delete your signature?" confirmLabel="Delete" destructive onCancel={() => setDeleting(false)} onConfirm={() => {
+          setDeleting(false);
+          onDelete().catch((e: Error) => toast.error(e.message));
+        }}>
         <p>Your signature and comment are removed and the count goes down by one. You can sign again later.</p>
         {DEMO_MODE && <p>Demo Mode: nothing is saved.</p>}
       </ConfirmDialog>
@@ -80,25 +84,33 @@ export function SignerMenu({ email, comment, onEdit, onDelete, onSignOut }: Prop
   );
 }
 
-function EditDialog({ open, comment, onCancel, onSave }: { open: boolean; comment: Comment; onCancel: () => void; onSave: (c: Comment) => void }) {
+function EditDialog({ open, comment, onCancel, onSave }: { open: boolean; comment: Comment; onCancel: () => void; onSave: (c: Comment) => Promise<void> }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [anonymous, setAnonymous] = useState(comment.name === ANONYMOUS_NAME);
   const [name, setName] = useState(anonymous ? "" : comment.name);
   const [message, setMessage] = useState(comment.message);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     const d = ref.current;
     if (open && d && !d.open) d.showModal();
     else if (!open && d?.open) d.close();
   }, [open]);
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
     // Same rules as signing (spam checks, name or Anonymous).
     const parsed = commentInputSchema.safeParse({ name, message, anonymous, avatarUrl: comment.avatarUrl });
     if (!parsed.success) return setError(parsed.error.issues[0].message);
     setError(null);
-    onSave({ ...comment, name: parsed.data.name, message: parsed.data.message });
+    setBusy(true);
+    try {
+      await onSave({ ...comment, name: parsed.data.name, message: parsed.data.message });
+    } catch (err) {
+      setError(err instanceof TypeError ? "Network error. Please try again." : (err as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -122,7 +134,7 @@ function EditDialog({ open, comment, onCancel, onSave }: { open: boolean; commen
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button type="submit">Save</Button>
+          <Button type="submit" disabled={busy}>Save</Button>
         </div>
       </form>
     </dialog>

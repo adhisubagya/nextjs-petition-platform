@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { track } from "@/lib/analytics";
 import { DEMO_MODE } from "@/lib/demo";
+import { liveIdToken } from "@/lib/my-signature";
 import { commentFieldsSchema, MESSAGE_MAX, NAME_MAX, hasName, nameIssue } from "@/lib/schemas";
 import { siteKey } from "@/lib/turnstile";
 import type { Comment } from "@/lib/types";
@@ -18,12 +19,6 @@ import type { Comment } from "@/lib/types";
 const formSchema = commentFieldsSchema.omit({ avatarUrl: true }).extend({ anonymous: z.boolean(), website: z.string() }).refine(hasName, nameIssue);
 type FormValues = z.infer<typeof formSchema>;
 
-
-async function liveIdToken() {
-  const auth = (await import("@/lib/firebase/client")).clientAuth();
-  await auth.authStateReady(); // after a reload the session is restored asynchronously
-  return auth.currentUser?.getIdToken() ?? null;
-}
 
 type Props = { campaign: string; email: string; onSigned: (comment: Comment) => void; menu: ReactNode };
 
