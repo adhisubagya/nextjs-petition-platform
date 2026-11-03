@@ -34,7 +34,7 @@ vi.mock("@/lib/firebase/admin", () => ({
 vi.mock("firebase-admin/firestore", () => ({
   FieldValue: { increment: (operand: number) => ({ operand }), serverTimestamp: () => "now" },
 }));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn(), unstable_cache: (fn: unknown) => fn }));
 // Bearer "<uid>" or "<uid>|<google photo>"; the real ownAvatar check runs.
 vi.mock("@/lib/server/signer-auth", async () => ({
   ownAvatar: (await vi.importActual<typeof import("@/lib/server/signer-auth")>("@/lib/server/signer-auth")).ownAvatar,

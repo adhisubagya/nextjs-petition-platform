@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   if (!secret) return NextResponse.json({ error: "CRON_SECRET is not set" }, { status: 503 });
   if (!cronAuthorized(req.headers.get("authorization"), secret)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (DEMO_MODE) return NextResponse.json({ skipped: "demo" });
-  if (!isFirebaseAdminConfigured || !isPosthogQueryConfigured()) return NextResponse.json({ skipped: "not configured" });
+  if (!isFirebaseAdminConfigured || !(await isPosthogQueryConfigured())) return NextResponse.json({ skipped: "not configured" });
 
   const db = adminDb();
   const meta = db.doc("meta/rollup");
