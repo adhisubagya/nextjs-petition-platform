@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { ImagePlus } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { HoldToSign } from "@/components/HoldToSign";
@@ -25,9 +25,9 @@ async function liveIdToken() {
   return auth.currentUser?.getIdToken() ?? null;
 }
 
-type Props = { campaign: string; email: string; onSigned: (comment: Comment) => void; onSignOut: () => void };
+type Props = { campaign: string; email: string; onSigned: (comment: Comment) => void; menu: ReactNode };
 
-export function SignForm({ campaign, email, onSigned, onSignOut }: Props) {
+export function SignForm({ campaign, email, onSigned, menu }: Props) {
   const [token, setToken] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -65,14 +65,14 @@ export function SignForm({ campaign, email, onSigned, onSignOut }: Props) {
 
   return (
     <Card className="shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-xl">Sign the petition</CardTitle>
-        <CardDescription>
-          Signed in as <span className="text-foreground">{email}</span> ·{" "}
-          <button type="button" className="underline underline-offset-2 hover:text-foreground" onClick={onSignOut}>
-            Sign out
-          </button>
-        </CardDescription>
+      <CardHeader className="flex-row items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1.5">
+          <CardTitle className="text-xl">Sign the petition</CardTitle>
+          <CardDescription className="truncate">
+            Signed in as <span className="text-foreground">{email}</span>
+          </CardDescription>
+        </div>
+        {menu}
       </CardHeader>
       <CardContent>
         {/* Only the hold button signs; Enter in a field must not submit around it. */}

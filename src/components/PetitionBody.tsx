@@ -12,6 +12,7 @@ import { CommentList } from "./CommentList";
 import { ProgressBar } from "./ProgressBar";
 import { ShareCard } from "./ShareCard";
 import { SignInCard } from "./SignInCard";
+import { SignerMenu } from "./SignerMenu";
 import { SignForm } from "./SignForm";
 
 // Holds comments signed in this session so they appear instantly (and, in Demo Mode, only here).
@@ -19,9 +20,29 @@ type Props = { campaign: Campaign; initialPage: CommentPage; renderedAt: number;
 
 export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, children }: Props) {
   const [added, setAdded] = useState<Comment[]>([]);
-  // True only right after signing here; a restored signature shows the "already signed" notice instead.
-  const [fresh, setFresh] = useState(false);
-  const { signer, signIn, markSigned, signOut } = useSigner();
+  const { signer, signIn, markSigned, unmarkSigned, signOut } = useSigner();
+  // The signature made in this view; a restored one (earlier in the tab) shows the "already signed" notice instead.
+  const [mine, setMine] = useState<Comment | null>(null);
+  const signedHere = !!signer?.signed.includes(campaign.slug);
+  const menu = signer && (
+    <SignerMenu
+      email={signer.email}
+      comment={signedHere ? mine : null}
+      onEdit={(c) => {
+        setAdded((prev) => prev.map((x) => (x.id === c.id ? c : x)));
+        setMine(c);
+      }}
+      onDelete={() => {
+        setAdded((prev) => prev.filter((x) => x.id !== mine?.id));
+        setMine(null);
+        unmarkSigned(campaign.slug);
+      }}
+      onSignOut={() => {
+        setMine(null);
+        signOut();
+      }}
+    />
+  );
   const { phase } = usePhase(campaign, renderedAt);
   return (
     // Mobile order: progress, form, comments. Desktop: form pinned in the right column.
@@ -36,17 +57,17 @@ export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, chil
         {phase !== "live" ? (
           <SigningClosed campaign={campaign} scheduled={phase === "scheduled"} />
         ) : !signer ? (
-          <SignInCard onSignedIn={(email) => (setFresh(false), signIn(email))} />
-        ) : signer.signed.includes(campaign.slug) ? (
-          <ShareCard title={campaign.title} url={shareUrl} alreadySigned={!fresh} />
+          <SignInCard onSignedIn={(email) => (setMine(null), signIn(email))} />
+        ) : signedHere ? (
+          <ShareCard title={campaign.title} url={shareUrl} alreadySigned={!mine} menu={menu} />
         ) : (
           <SignForm
             campaign={campaign.slug}
             email={signer.email}
-            onSignOut={signOut}
+            menu={menu}
             onSigned={(c) => {
               setAdded((prev) => [c, ...prev]);
-              setFresh(true);
+              setMine(c);
               markSigned(campaign.slug);
             }}
           />

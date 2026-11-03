@@ -55,6 +55,13 @@ export function markSigned(signer: Signer, slug: string) {
   write({ ...signer, signed });
 }
 
+/** After deleting a signature: this person may sign that campaign again. */
+export function unmarkSigned(signer: Signer, slug: string) {
+  const signed = signer.signed.filter((s) => s !== slug);
+  remember(signer.email, signed);
+  write({ ...signer, signed });
+}
+
 export const readSigner = (): Signer | null => JSON.parse(read() ?? "null");
 
 function subscribe(cb: () => void) {
@@ -70,6 +77,7 @@ export function useSigner() {
     signer,
     signIn,
     markSigned: (slug: string) => signer && markSigned(signer, slug),
+    unmarkSigned: (slug: string) => signer && unmarkSigned(signer, slug),
     signOut: () => {
       write(null);
       if (!DEMO_MODE) void import("@/lib/firebase/client").then(({ clientAuth }) => clientAuth().signOut());
