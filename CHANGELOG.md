@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Changed
+
+- Avatars are a 64 px WebP stored inline on the signature (checked server-side: real WebP/PNG/JPEG bytes, 8 KB max) instead of Firebase Storage uploads, so live mode needs no Storage bucket or Blaze plan; `storage.rules` is gone.
+
 ### Added
 
 - Signer menu under the signer's avatar on the sign card (like YouTube's account menu): edit my signature (name or Anonymous, comment), delete my signature (with confirmation; the count goes down and they can sign again), sign out. Demo Mode keeps changes in the page; live mode (still off) edits and deletes through `/api/comments/mine`, which finds the signature only through the signer's verified uid, applies the signing rules, rate-limits, and removes the comment, signer record and one from the count in one transaction.

@@ -1,16 +1,13 @@
 import imageCompression from "browser-image-compression";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { clientAuth, clientStorage } from "@/lib/firebase/client";
+import { TINY_AVATAR_MAX_BYTES, TINY_AVATAR_PX } from "@/lib/tiny-avatar";
 
-export function compressAvatar(file: File): Promise<File> {
-  return imageCompression(file, { maxSizeMB: 0.05, maxWidthOrHeight: 256, fileType: "image/webp", useWebWorker: true });
-}
-
-export async function uploadAvatar(file: File): Promise<string> {
-  const uid = clientAuth().currentUser?.uid;
-  if (!uid) throw new Error("Sign in before uploading an avatar");
-  // storage.rules only accept uploads into the signer's own folder.
-  const avatarRef = ref(clientStorage(), `avatars/${uid}/${crypto.randomUUID()}.webp`);
-  await uploadBytes(avatarRef, file, { contentType: "image/webp" });
-  return getDownloadURL(avatarRef);
+/** Shrinks a photo to a tiny WebP data URL that is stored on the comment itself (no Storage bucket). */
+export async function tinyAvatar(file: File): Promise<string> {
+  const small = await imageCompression(file, {
+    maxSizeMB: (TINY_AVATAR_MAX_BYTES * 0.9) / 1024 / 1024,
+    maxWidthOrHeight: TINY_AVATAR_PX,
+    fileType: "image/webp",
+    useWebWorker: true,
+  });
+  return imageCompression.getDataUrlFromFile(small);
 }

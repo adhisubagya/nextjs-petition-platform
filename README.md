@@ -25,14 +25,13 @@ The public deployment runs in **Demo Mode**: everything works in the browser, bu
 | Hosting | Vercel (Edge cache + serverless functions) |
 | Domain and TLS | Porkbun registrar, Cloudflare DNS with SSL/TLS **Full (strict)** |
 | Database | Firebase Firestore |
-| File storage | Firebase Cloud Storage (avatars only) |
 | Auth | Firebase Auth: admin email/password; signers via email code + custom token (live mode) |
 | Forms and validation | React Hook Form + Zod |
 | Server state | TanStack Query |
 | Bot protection | Cloudflare Turnstile |
 | Rate limiting | `@upstash/ratelimit` on Upstash Redis |
 | Analytics | PostHog (tracking + HogQL API for the dashboard) |
-| Avatars | `browser-image-compression` |
+| Avatars | `browser-image-compression` → 64 px WebP stored inline on the comment (no file storage) |
 | Dates | `date-fns` |
 | Tests | Vitest, GitHub Actions |
 
@@ -44,7 +43,6 @@ flowchart LR
   E -->|"miss / revalidate"| P["Next.js page<br/>ISR"]
   B -->|"GET /api/comments"| E
   B -->|"POST /api/comments"| R["Route Handler"]
-  B -->|"avatar upload, live mode"| S[("Cloud Storage")]
   B -->|"ID token"| AA["/api/admin/*"]
   P --> F[("Firestore")]
   R --> RL[("Upstash Redis")]
@@ -55,7 +53,7 @@ flowchart LR
   AA -->|"live mode only"| F
 ```
 
-All Firestore reads and writes go through the server with the Firebase Admin SDK. The Firestore rules deny every client write (`firestore.rules`), so validation, rate limiting and bot checks can't be bypassed by calling Firebase directly. The one direct client write is the avatar upload: `storage.rules` accepts only new images under 200KB, (WebP, PNG or JPEG) from a signer who passed the email code, into their own `avatars/{uid}/` folder, and the API accepts only avatar URLs from that folder. Demo Mode never uploads.
+All Firestore reads and writes go through the server with the Firebase Admin SDK. The Firestore rules deny every client write (`firestore.rules`), so validation, rate limiting and bot checks can't be bypassed by calling Firebase directly. There are no direct client writes: avatars are shrunk in the browser to a 64 px WebP data URL and sent with the signature; the server accepts only WebP/PNG/JPEG bytes up to 8 KB (`src/lib/tiny-avatar.ts`), so no Storage bucket or Blaze plan is needed.
 
 ### Data model
 
@@ -160,9 +158,9 @@ The app runs with an empty `.env.local`. Add services one at a time:
 
 ### Firebase setup
 
-1. Create a project and enable Firestore, Storage and Email/Password auth.
+1. Create a project and enable Firestore and Email/Password auth (no Storage needed).
 2. Create the admin user (for the demo: `admin@demo.com` / `demo2026`) and add the email to `ADMIN_EMAILS`.
-3. Deploy the rules and indexes: `firebase deploy --only firestore:rules,firestore:indexes,storage`.
+3. Deploy the rules and indexes: `firebase deploy --only firestore:rules,firestore:indexes`.
 4. Create a service account key and copy its values into the `FIREBASE_*` server variables.
 5. `npm run seed`.
 6. Optional, Google sign-in for signers (ADR 0006): Authentication → Sign-in method → Add new provider → **Google** → Enable, pick a support email, Save. Then Authentication → Settings → **Authorized domains** → add the live domain (e.g. `your-app.vercel.app`; preview URLs need adding one by one, wildcards are not accepted). Set `NEXT_PUBLIC_GOOGLE_SIGNIN=true` and redeploy.
@@ -215,7 +213,7 @@ src/
     firebase/                Client and Admin SDK setup
     server/                  Rate limit, Turnstile, admin and signer auth, email codes, PostHog
 scripts/seed.ts
-firestore.rules, storage.rules, firestore.indexes.json
+firestore.rules, firestore.indexes.json
 ```
 
 ## License

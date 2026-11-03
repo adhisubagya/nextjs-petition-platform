@@ -72,12 +72,6 @@ export async function POST(req: NextRequest) {
   // Live mode: one signature per signed-in email. The uid comes from a verified Firebase ID token.
   const uid = await signerUid(req);
   if (!uid) return NextResponse.json({ error: "Sign in with your email first." }, { status: 401 });
-  // Avatars must be the signer's own upload in our bucket (storage.rules: avatars/{uid}/...).
-  const avatarPrefix = `https://firebasestorage.googleapis.com/v0/b/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/o/avatars%2F${uid}%2F`;
-  if (comment.avatarUrl && !comment.avatarUrl.startsWith(avatarPrefix)) {
-    return NextResponse.json({ error: "Invalid avatar" }, { status: 400 });
-  }
-
   const db = adminDb();
   const petition = db.collection("petitions").doc(slug.data);
   const ref = petition.collection("comments").doc();

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isTinyAvatar } from "@/lib/tiny-avatar";
 
 export const NAME_MAX = 40;
 export const MESSAGE_MAX = 500;
@@ -23,7 +24,8 @@ export const commentFieldsSchema = z.object({
   message: messageSchema,
   // Checked by default: the public comment then shows only "Anonymous".
   anonymous: z.boolean().default(true),
-  avatarUrl: z.url({ protocol: /^https$/ }).nullable().default(null),
+  // Tiny inline avatar (src/lib/tiny-avatar.ts); no Storage URLs.
+  avatarUrl: z.string().refine(isTinyAvatar, "Avatar must be a small WebP, PNG or JPEG").nullable().default(null),
 });
 
 type Fields = { name: string; anonymous: boolean };
