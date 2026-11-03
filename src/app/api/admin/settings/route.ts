@@ -12,7 +12,7 @@ export async function GET(req: Request) {
 
 // Allowed in Demo Mode: only a developer (custom claim, Admin SDK only) can write this one config doc.
 export async function PUT(req: Request) {
-  if (!(await caller(req)).developer) return NextResponse.json({ error: "Developer access only." }, { status: 403 });
+  if (!(await caller(req)).developer) return NextResponse.json({ error: "Master account only." }, { status: 403 });
   const parsed = settingsSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid settings" }, { status: 400 });
   await saveSettings(parsed.data);

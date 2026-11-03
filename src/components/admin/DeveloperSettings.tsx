@@ -38,9 +38,9 @@ export function DeveloperSettings() {
   }
 
   return (
-    <AdminShell email={session.email} title="Developer">
+    <AdminShell email={session.email} title="Master settings">
       {!developer ? (
-        <p className="text-sm text-muted-foreground">Developer access only.</p>
+        <p className="text-sm text-muted-foreground">Master account only.</p>
       ) : (
         <div className="grid max-w-2xl gap-6">
           <Card className="rounded-2xl">
@@ -62,7 +62,7 @@ export function DeveloperSettings() {
           <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle>Admin capabilities</CardTitle>
-              <CardDescription>What other admins may do. Developers keep every capability the mode allows.</CardDescription>
+              <CardDescription>What other admins may do. The Master account keeps every capability the mode allows.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-2 sm:grid-cols-2">
               {(Object.keys(CAPABILITIES) as Capability[]).map((cap) => (
