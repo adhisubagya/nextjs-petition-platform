@@ -17,14 +17,19 @@ describe("settings API", () => {
     saved.length = 0;
   });
 
-  it("lets admins read and tells them they are not developers", async () => {
-    expect(await (await GET(new Request("http://x"))).json()).toEqual({ settings: { mode: "multiple", disabled: [] }, developer: false });
+  it("lets admins read without revealing the developer role", async () => {
+    expect(await (await GET(new Request("http://x"))).json()).toEqual({ settings: { mode: "multiple", disabled: [] } });
+    who.developer = true;
+    expect((await (await GET(new Request("http://x"))).json()).developer).toBe(true);
+    who.developer = false;
     who.admin = false;
     expect((await GET(new Request("http://x"))).status).toBe(401);
   });
 
   it("refuses writes from admins who are not developers", async () => {
-    expect((await put({ mode: "single", disabled: [] })).status).toBe(403);
+    const res = await put({ mode: "single", disabled: [] });
+    expect(res.status).toBe(403);
+    expect(JSON.stringify(await res.json())).not.toMatch(/master|developer/i);
     expect(saved).toHaveLength(0);
   });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { notFound } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,11 @@ import { AdminShell } from "./AdminShell";
 
 const choice = "flex items-center gap-3 rounded-lg border px-3 py-2 text-sm has-[:checked]:border-foreground";
 
-/** Developer-only: system mode and which admin capabilities other admins may use. The server enforces both. */
+/** Master-only (developer claim): system mode and which capabilities other admins may use. Anyone else gets a 404; the server enforces both. */
 export function DeveloperSettings() {
   const session = useAdminSession();
   const qc = useQueryClient();
-  const { settings, developer } = useAdminSettings();
+  const { settings, developer, loading } = useAdminSettings();
   const [draft, setDraft] = useState<Settings>(settings);
   const [saving, setSaving] = useState(false);
   useEffect(() => setDraft(settings), [settings]);
@@ -37,12 +38,12 @@ export function DeveloperSettings() {
     }
   }
 
+  if (loading) return <p className="flex min-h-[80vh] items-center justify-center text-sm text-muted-foreground">Loading…</p>;
+  if (!developer) notFound();
+
   return (
     <AdminShell email={session.email} title="Master settings">
-      {!developer ? (
-        <p className="text-sm text-muted-foreground">Master account only.</p>
-      ) : (
-        <div className="grid max-w-2xl gap-6">
+      <div className="grid max-w-2xl gap-6">
           <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle>System mode</CardTitle>
@@ -78,8 +79,7 @@ export function DeveloperSettings() {
               {saving ? "Saving…" : "Save"}
             </Button>
           </div>
-        </div>
-      )}
+      </div>
     </AdminShell>
   );
 }
