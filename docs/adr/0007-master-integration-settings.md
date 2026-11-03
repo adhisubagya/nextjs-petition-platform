@@ -19,4 +19,5 @@ The owner wants service parameters (Turnstile, PostHog, email providers, Google 
 
 - Losing `SETTINGS_ENCRYPTION_KEY` means re-entering panel secrets; the app falls back to env meanwhile.
 - Pages cached for 24 h bake in public values, so saving one must revalidate those pages (wired with the public values).
-- Follow-ups: API + panel (404 for non-Master, fresh sign-in for writes), server consumers, public values.
+- `/api/admin/integrations` (GET status, PUT one field) is a 404 for anyone but Master, refuses writes in Demo Mode and when the sign-in is older than 10 minutes, and never returns secret values.
+- Follow-ups: server consumers, public values.

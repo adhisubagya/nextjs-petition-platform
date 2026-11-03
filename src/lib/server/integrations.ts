@@ -80,3 +80,22 @@ export async function saveIntegration(field: IntegrationKey, value: string | nul
   await batch.commit();
   revalidateTag("integrations");
 }
+
+export type IntegrationSource = "panel" | "env" | "unset";
+
+/** Where each value comes from (never the secret itself), whether secrets can be saved, and the last 20 changes. */
+export async function integrationStatus() {
+  const panel = mergeIntegrations(await readDoc(), { SETTINGS_ENCRYPTION_KEY: process.env.SETTINGS_ENCRYPTION_KEY });
+  const fields = KEYS.map((key) => {
+    const source: IntegrationSource = panel[key] ? "panel" : process.env[key] ? "env" : "unset";
+    const value = INTEGRATIONS[key].secret ? undefined : (panel[key] ?? process.env[key]);
+    return { key, secret: INTEGRATIONS[key].secret, source, value };
+  });
+  const audit = isFirebaseAdminConfigured
+    ? (await ref().collection("audit").orderBy("at", "desc").limit(20).get()).docs.map((d) => {
+        const { at, field, action } = d.data();
+        return { at: at?.toDate?.().toISOString() ?? null, field: String(field), action: String(action) };
+      })
+    : [];
+  return { fields, encryption: settingsKey() !== null, audit };
+}
