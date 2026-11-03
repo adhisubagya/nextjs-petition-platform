@@ -7,7 +7,7 @@ vi.mock("firebase-admin/auth", () => ({ getAuth: () => ({ verifyIdToken, createC
 vi.mock("@/lib/firebase/admin", () => ({ adminDb: () => ({}) }));
 vi.stubEnv("SIGNER_ID_SECRET", "test-secret");
 
-const { customTokenFor, signerUid, uidFor } = await import("./signer-auth");
+const { customTokenFor, signerUid, uidFor, verifyGoogleToken } = await import("./signer-auth");
 const req = (token?: string) => new Request("http://x", { headers: token ? { authorization: `Bearer ${token}` } : {} });
 
 describe("signer auth", () => {
@@ -39,5 +39,33 @@ describe("signer auth", () => {
       throw new Error("bad");
     });
     expect(await signerUid(req("t"))).toBeNull();
+  });
+
+  describe("Google ID tokens", () => {
+    const google = { uid: "g1", email: "Alex@Example.com", email_verified: true, firebase: { sign_in_provider: "google.com" } };
+
+    it("accepts a verified Google account and lower-cases the email, so it maps to the email-code uid", async () => {
+      verifyIdToken.mockResolvedValue(google);
+      const result = await verifyGoogleToken("t");
+      expect(result).toEqual({ email: "alex@example.com", uid: "g1" });
+      expect(uidFor(result!.email)).toBe(uidFor("alex@example.com"));
+    });
+
+    it("rejects other providers, unverified or missing emails", async () => {
+      for (const d of [
+        { ...google, firebase: { sign_in_provider: "password" } },
+        { ...google, firebase: { sign_in_provider: "custom" } },
+        { ...google, email_verified: false },
+        { ...google, email: undefined },
+      ]) {
+        verifyIdToken.mockResolvedValue(d);
+        expect(await verifyGoogleToken("t")).toBeNull();
+      }
+    });
+
+    it("rejects tokens firebase-admin refuses (wrong audience, expired, bad signature)", async () => {
+      verifyIdToken.mockRejectedValue(new Error("auth/id-token-expired"));
+      expect(await verifyGoogleToken("t")).toBeNull();
+    });
   });
 });

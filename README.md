@@ -154,7 +154,8 @@ The app runs with an empty `.env.local`. Add services one at a time:
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Rate limiting |
 | `NEXT_PUBLIC_POSTHOG_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_PERSONAL_API_KEY` | Tracking and real dashboard stats |
 | `NEXT_PUBLIC_SITE_URL` | Absolute URLs for Open Graph and share links |
-| `OTP_HMAC_SECRET`, `SIGNER_ID_SECRET`, `EMAIL_FROM`, `BREVO_API_KEY` (+ optional `RESEND_API_KEY`, `MAILJET_API_KEY`/`MAILJET_SECRET_KEY`) | Live-mode email codes with provider fallback |
+| `OTP_HMAC_SECRET`, `SIGNER_ID_SECRET`, `EMAIL_FROM`, `BREVO_API_KEY` (+ optional `RESEND_API_KEY`, `MAILJET_API_KEY`/`MAILJET_SECRET_KEY`, `GMAIL_USER`/`GMAIL_APP_PASSWORD`) | Live-mode email codes with provider fallback |
+| `NEXT_PUBLIC_GOOGLE_SIGNIN=true` | Live-mode "Continue with Google" for signers (unset: simulated in Demo Mode, off in live) |
 | `CSP_ENFORCE=true` | Enforce the full Content Security Policy instead of report-only |
 
 ### Firebase setup
@@ -164,6 +165,17 @@ The app runs with an empty `.env.local`. Add services one at a time:
 3. Deploy the rules and indexes: `firebase deploy --only firestore:rules,firestore:indexes,storage`.
 4. Create a service account key and copy its values into the `FIREBASE_*` server variables.
 5. `npm run seed`.
+6. Optional, Google sign-in for signers (ADR 0006): Authentication → Sign-in method → Add new provider → **Google** → Enable, pick a support email, Save. Then Authentication → Settings → **Authorized domains** → add the live domain (e.g. `your-app.vercel.app`; preview URLs need adding one by one, wildcards are not accepted). Set `NEXT_PUBLIC_GOOGLE_SIGNIN=true` and redeploy.
+
+### Email codes without a domain
+
+Brevo, Resend and Mailjet need a domain you control (SPF/DKIM). On a plain `*.vercel.app` deploy, send codes from a Gmail account instead; it is tried after the others, and `EMAIL_FROM` is not needed if Gmail is the only provider.
+
+1. Use a dedicated Gmail account for the campaign, not a personal one. Turn on **2-Step Verification** (Google Account → Security).
+2. Google Account → Security → **App passwords** → create one named after the site. Copy the 16 characters.
+3. Set `GMAIL_USER` (the address) and `GMAIL_APP_PASSWORD` in Vercel (never in the repo) and redeploy.
+
+Limits and risk: Google documents about **500 messages a day** for a regular Gmail account (we stop at 475); hitting it blocks sending for up to 24 hours. Google can suspend accounts that look like bulk senders, so keep it to sign-in codes, and prefer Google sign-in as the main button so most signers never need a code.
 
 ### Deploying
 
