@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { codeEmail, EmailRejectedError, EmailUnavailableError, sendEmail } from "./email";
+
+const sendMail = vi.fn();
+vi.mock("nodemailer", () => ({ default: { createTransport: () => ({ sendMail }) } }));
+
+const { codeEmail, EmailRejectedError, EmailUnavailableError, sendEmail, smtpStatus } = await import("./email");
 import { memoryStore } from "./kv";
 
 const env = { EMAIL_FROM: "no-reply@example.com", BREVO_API_KEY: "b", RESEND_API_KEY: "r", MAILJET_API_KEY: "m", MAILJET_SECRET_KEY: "s" };
@@ -60,5 +64,37 @@ describe("sendEmail provider fallback", () => {
     const down = fakeFetch({ brevo: 500, resend: 500, mailjet: 500 });
     await expect(sendEmail(mail, { store: memoryStore(), env, now, fetch: down })).rejects.toBeInstanceOf(EmailUnavailableError);
     await expect(sendEmail(mail, { store: memoryStore(), env: { EMAIL_FROM: "x@example.com" }, now, fetch: down })).rejects.toBeInstanceOf(EmailUnavailableError);
+  });
+});
+
+describe("Gmail SMTP fallback", () => {
+  const gmail = { GMAIL_USER: "campaign@gmail.com", GMAIL_APP_PASSWORD: "abcd efgh ijkl mnop" };
+
+  it("sends from the Gmail account itself, without EMAIL_FROM, when it is the only provider", async () => {
+    sendMail.mockReset().mockResolvedValue({});
+    const store = memoryStore();
+    expect(await sendEmail(mail, { store, env: gmail, now, fetch: fakeFetch({}) })).toBe("gmail");
+    expect(sendMail.mock.calls[0][0]).toMatchObject({ from: { address: "campaign@gmail.com" }, to: "signer@example.com" });
+    expect(await store.get("mail:gmail:2026-11-02")).toBe("1");
+  });
+
+  it("is used after the HTTP providers fail", async () => {
+    sendMail.mockReset().mockResolvedValue({});
+    const down = fakeFetch({ brevo: 500, resend: 500, mailjet: 500 });
+    expect(await sendEmail(mail, { store: memoryStore(), env: { ...env, ...gmail }, now, fetch: down })).toBe("gmail");
+  });
+
+  it("marks Gmail spent for the day on its daily-limit error", async () => {
+    sendMail.mockReset().mockRejectedValue({ responseCode: 550, response: "550 5.4.5 Daily user sending limit exceeded" });
+    const store = memoryStore();
+    await expect(sendEmail(mail, { store, env: gmail, now, fetch: fakeFetch({}) })).rejects.toBeInstanceOf(EmailUnavailableError);
+    expect(await store.get("mail:gmail:2026-11-02")).toBe("475");
+  });
+
+  it("maps SMTP replies to the fallback rules", () => {
+    expect(smtpStatus({ responseCode: 421 })).toBe(429);
+    expect(smtpStatus({ responseCode: 550, response: "550 5.1.1 The email account does not exist" })).toBe(422);
+    expect(smtpStatus({ responseCode: 535, response: "535 5.7.8 Username and Password not accepted" })).toBe(503);
+    expect(smtpStatus({})).toBe(503);
   });
 });
