@@ -19,6 +19,8 @@ type Props = { campaign: Campaign; initialPage: CommentPage; renderedAt: number;
 
 export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, children }: Props) {
   const [added, setAdded] = useState<Comment[]>([]);
+  // True only right after signing here; a restored signature shows the "already signed" notice instead.
+  const [fresh, setFresh] = useState(false);
   const { signer, signIn, markSigned, signOut } = useSigner();
   const { phase } = usePhase(campaign, renderedAt);
   return (
@@ -34,9 +36,9 @@ export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, chil
         {phase !== "live" ? (
           <SigningClosed campaign={campaign} scheduled={phase === "scheduled"} />
         ) : !signer ? (
-          <SignInCard onSignedIn={signIn} />
+          <SignInCard onSignedIn={(email) => (setFresh(false), signIn(email))} />
         ) : signer.signed.includes(campaign.slug) ? (
-          <ShareCard title={campaign.title} url={shareUrl} />
+          <ShareCard title={campaign.title} url={shareUrl} alreadySigned={!fresh} />
         ) : (
           <SignForm
             campaign={campaign.slug}
@@ -44,6 +46,7 @@ export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, chil
             onSignOut={signOut}
             onSigned={(c) => {
               setAdded((prev) => [c, ...prev]);
+              setFresh(true);
               markSigned(campaign.slug);
             }}
           />

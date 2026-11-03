@@ -8,6 +8,8 @@ import { DEMO_MODE } from "@/lib/demo";
 export type Signer = { email: string; signed: string[] };
 
 const KEY = "signer";
+// email -> signed slugs, kept across sign-outs so signing in again as the same person shows "already signed".
+const HISTORY = "signer-history";
 const EVENT = "signer-change";
 
 function read(): string | null {
@@ -28,6 +30,33 @@ function write(value: Signer | null) {
   window.dispatchEvent(new Event(EVENT));
 }
 
+function history(): Record<string, string[]> {
+  try {
+    return JSON.parse(sessionStorage.getItem(HISTORY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function remember(email: string, signed: string[]) {
+  try {
+    sessionStorage.setItem(HISTORY, JSON.stringify({ ...history(), [email]: signed }));
+  } catch {
+    // Storage blocked: same as above.
+  }
+}
+
+/** Restores what this person already signed in this tab, so a second signature is refused in the UI too. */
+export const signIn = (email: string) => write({ email, signed: history()[email] ?? [] });
+
+export function markSigned(signer: Signer, slug: string) {
+  const signed = [...signer.signed, slug];
+  remember(signer.email, signed);
+  write({ ...signer, signed });
+}
+
+export const readSigner = (): Signer | null => JSON.parse(read() ?? "null");
+
 function subscribe(cb: () => void) {
   window.addEventListener(EVENT, cb);
   return () => window.removeEventListener(EVENT, cb);
@@ -39,8 +68,8 @@ export function useSigner() {
   const signer = parsed && { ...parsed, signed: Array.isArray(parsed.signed) ? parsed.signed : [] };
   return {
     signer,
-    signIn: (email: string) => write({ email, signed: [] }),
-    markSigned: (slug: string) => signer && write({ ...signer, signed: [...signer.signed, slug] }),
+    signIn,
+    markSigned: (slug: string) => signer && markSigned(signer, slug),
     signOut: () => {
       write(null);
       if (!DEMO_MODE) void import("@/lib/firebase/client").then(({ clientAuth }) => clientAuth().signOut());
