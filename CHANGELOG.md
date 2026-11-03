@@ -10,6 +10,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Signer menu → Change avatar: pick the Google photo, an uploaded image, initials, or one of six colours. Removing an upload never silently falls back to the Google photo. Google sign-in uses the Google photo by default (live mode carries it in the signer token, and the server only accepts that exact photo URL). `NEXT_PUBLIC_AVATAR_UPLOADS=false` hides image uploads.
+
 - Signer menu under the signer's avatar on the sign card (like YouTube's account menu): edit my signature (name or Anonymous, comment), delete my signature (with confirmation; the count goes down and they can sign again), sign out. Demo Mode keeps changes in the page; live mode (still off) edits and deletes through `/api/comments/mine`, which finds the signature only through the signer's verified uid, applies the signing rules, rate-limits, and removes the comment, signer record and one from the count in one transaction.
 - "Continue with Google" for signers, above the email code. Demo Mode shows a simulated account chooser that writes nothing; signing in again as someone who already signed in this tab shows "You have already signed this petition." `NEXT_PUBLIC_GOOGLE_SIGNIN` switches it (default: on in Demo Mode, off in live).
 - Live mode (still off): Google sign-in swaps a server-verified Google ID token (audience, expiry, provider, verified email) for the same signer uid as the email code, so one signature per person holds across both (ADR 0006).

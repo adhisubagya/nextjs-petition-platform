@@ -27,8 +27,13 @@ vi.mock("@/lib/firebase/admin", () => ({
   petitionId: () => "default",
 }));
 vi.mock("@/lib/server/turnstile", () => ({ verifyTurnstile: async () => true }));
-vi.mock("@/lib/server/signer-auth", () => ({
-  signerUid: async (req: Request) => req.headers.get("authorization")?.replace(/^Bearer /, "") || null,
+// Bearer "<uid>" or "<uid>|<google photo>"; the real ownAvatar check runs.
+vi.mock("@/lib/server/signer-auth", async () => ({
+  ownAvatar: (await vi.importActual<typeof import("@/lib/server/signer-auth")>("@/lib/server/signer-auth")).ownAvatar,
+  signerClaims: async (req: Request) => {
+    const [uid, photo = null] = (req.headers.get("authorization")?.replace(/^Bearer /, "") ?? "").split("|");
+    return uid ? { uid, photo } : null;
+  },
 }));
 
 const { Timestamp } = await import("firebase-admin/firestore");

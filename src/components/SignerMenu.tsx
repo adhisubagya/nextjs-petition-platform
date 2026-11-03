@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Pencil, Trash2 } from "lucide-react";
+import { CircleUserRound, LogOut, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
@@ -9,10 +9,13 @@ import { Input, Label, Textarea } from "@/components/ui/input";
 import { DEMO_MODE } from "@/lib/demo";
 import { ANONYMOUS_NAME, MESSAGE_MAX, NAME_MAX, commentInputSchema } from "@/lib/schemas";
 import type { Comment } from "@/lib/types";
+import { AvatarDialog } from "./AvatarDialog";
 import { SignerAvatar } from "./SignerAvatar";
 
 type Props = {
   email: string;
+  /** Google profile photo, when signed in with Google. */
+  photo: string | null;
   /** This signer's signature on the current campaign, when this view has it. */
   comment?: Comment | null;
   /** Rejects with a message the signer can read; the dialog stays open. */
@@ -24,11 +27,14 @@ type Props = {
 const item = "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none";
 
 /** Avatar button with a menu below it. Native popover: light dismiss, Escape and focus return come from the browser. */
-export function SignerMenu({ email, comment, onEdit, onDelete, onSignOut }: Props) {
+export function SignerMenu({ email, photo, comment, onEdit, onDelete, onSignOut }: Props) {
   const button = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [choosing, setChoosing] = useState(false);
+  // Before signing there is no comment yet, so the Google photo (if any) stands in.
+  const avatar = comment ? { avatarUrl: comment.avatarUrl, preset: comment.avatarPreset } : { avatarUrl: photo, preset: null };
   const canChange = !!comment;
 
   // Top layer has no anchor in all browsers yet, so place the menu under the avatar when it opens.
@@ -46,11 +52,11 @@ export function SignerMenu({ email, comment, onEdit, onDelete, onSignOut }: Prop
   return (
     <>
       <button ref={button} type="button" popoverTarget="signer-menu" aria-label="Your signature and account" className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
-        <SignerAvatar name={email} avatarUrl={comment?.avatarUrl ?? null} />
+        <SignerAvatar name={email} {...avatar} />
       </button>
       <div ref={menu} id="signer-menu" popover="auto" onToggle={place} className="fixed inset-auto m-0 w-64 rounded-xl border bg-popover p-2 text-popover-foreground shadow-lg">
         <div className="flex items-center gap-3 border-b px-2 pb-3 pt-1">
-          <SignerAvatar name={email} avatarUrl={comment?.avatarUrl ?? null} />
+          <SignerAvatar name={email} {...avatar} />
           <div className="min-w-0 text-sm">
             <p className="truncate font-medium">{comment && comment.name !== ANONYMOUS_NAME ? comment.name : "Signed in"}</p>
             <p className="truncate text-muted-foreground">{email}</p>
@@ -61,6 +67,9 @@ export function SignerMenu({ email, comment, onEdit, onDelete, onSignOut }: Prop
             <>
               <button type="button" className={item} onClick={run(() => setEditing(true))}>
                 <Pencil className="size-4" aria-hidden /> Edit my signature
+              </button>
+              <button type="button" className={item} onClick={run(() => setChoosing(true))}>
+                <CircleUserRound className="size-4" aria-hidden /> Change avatar
               </button>
               <button type="button" className={`${item} text-destructive`} onClick={run(() => setDeleting(true))}>
                 <Trash2 className="size-4" aria-hidden /> Delete my signature
@@ -73,6 +82,9 @@ export function SignerMenu({ email, comment, onEdit, onDelete, onSignOut }: Prop
         </div>
       </div>
       {comment && <EditDialog key={comment.id} open={editing} comment={comment} onCancel={() => setEditing(false)} onSave={async (c) => (await onEdit(c), setEditing(false))} />}
+      {comment && (
+        <AvatarDialog key={`${comment.id}-${choosing}`} open={choosing} comment={comment} photo={photo} onCancel={() => setChoosing(false)} onSave={async (c) => (await onEdit(c), setChoosing(false))} />
+      )}
       <ConfirmDialog open={deleting} title="Delete your signature?" confirmLabel="Delete" destructive onCancel={() => setDeleting(false)} onConfirm={() => {
           setDeleting(false);
           onDelete().catch((e: Error) => toast.error(e.message));
@@ -100,7 +112,7 @@ function EditDialog({ open, comment, onCancel, onSave }: { open: boolean; commen
   async function save(e: React.FormEvent) {
     e.preventDefault();
     // Same rules as signing (spam checks, name or Anonymous).
-    const parsed = commentInputSchema.safeParse({ name, message, anonymous, avatarUrl: comment.avatarUrl });
+    const parsed = commentInputSchema.safeParse({ name, message, anonymous, avatarUrl: comment.avatarUrl, avatarPreset: comment.avatarPreset ?? null });
     if (!parsed.success) return setError(parsed.error.issues[0].message);
     setError(null);
     setBusy(true);

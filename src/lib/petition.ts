@@ -21,6 +21,7 @@ function toComment(doc: DocumentSnapshot): Comment {
     name: d.name,
     message: d.message,
     avatarUrl: d.avatarUrl ?? null,
+    avatarPreset: d.avatarPreset ?? null,
     pinned: Boolean(d.pinned),
     hidden: Boolean(d.hidden),
     createdAt: d.createdAt.toDate().toISOString(),

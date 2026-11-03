@@ -27,6 +27,12 @@ async function call<T>(method: string, campaign: string, body?: object): Promise
 export const mySignature = {
   get: (campaign: string) => call<{ comment: Comment }>("GET", campaign).then((d) => d.comment),
   edit: (campaign: string, c: Comment) =>
-    call("PATCH", campaign, { name: c.name === ANONYMOUS_NAME ? "" : c.name, message: c.message, anonymous: c.name === ANONYMOUS_NAME }),
+    call("PATCH", campaign, {
+      name: c.name === ANONYMOUS_NAME ? "" : c.name,
+      message: c.message,
+      anonymous: c.name === ANONYMOUS_NAME,
+      avatarUrl: c.avatarUrl,
+      avatarPreset: c.avatarPreset ?? null,
+    }),
   remove: (campaign: string) => call("DELETE", campaign),
 };

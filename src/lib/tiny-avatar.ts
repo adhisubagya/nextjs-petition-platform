@@ -2,6 +2,13 @@
 // no Blaze plan and no extra Firestore read per avatar. Checked on both client and server.
 
 export const TINY_AVATAR_PX = 64;
+/** Photo uploads (inline, no Storage). Off hides "Upload image"; Google photo, initials and colours stay. */
+export const AVATAR_UPLOADS = process.env.NEXT_PUBLIC_AVATAR_UPLOADS !== "false";
+/** Colour choices for the initials avatar (OKLCH hues). */
+export const AVATAR_PRESET_HUES = [250, 150, 25, 300, 75, 200];
+
+/** A Google profile photo URL (live mode). The server also checks it is the signer's own, from their token. */
+export const isGooglePhoto = (value: string) => value.length <= 500 && /^https:\/\/lh\d\.googleusercontent\.com\/[^\s"'<>]+$/.test(value);
 /** Hard cap on decoded bytes; a 64 px WebP is usually 1-3 KB. */
 export const TINY_AVATAR_MAX_BYTES = 8 * 1024;
 

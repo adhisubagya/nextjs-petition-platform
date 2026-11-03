@@ -7,9 +7,10 @@ import { adminDb, petitionId } from "@/lib/firebase/admin";
 import { getCampaign, getComments, toCampaign } from "@/lib/petition";
 import { commentRequestSchema } from "@/lib/schemas";
 import { allowComment, allowCommentRead } from "@/lib/server/ratelimit";
-import { signerUid } from "@/lib/server/signer-auth";
+import { ownAvatar, signerClaims } from "@/lib/server/signer-auth";
 import { countMetric } from "@/lib/server/health";
 import { verifyTurnstile } from "@/lib/server/turnstile";
+import { AVATAR_UPLOADS } from "@/lib/tiny-avatar";
 import type { Comment } from "@/lib/types";
 
 // Firestore auto-IDs, or the in-memory seed IDs used without Firebase credentials.
@@ -70,8 +71,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Live mode: one signature per signed-in email. The uid comes from a verified Firebase ID token.
-  const uid = await signerUid(req);
-  if (!uid) return NextResponse.json({ error: "Sign in with your email first." }, { status: 401 });
+  const signerAuth = await signerClaims(req);
+  if (!signerAuth) return NextResponse.json({ error: "Sign in with your email first." }, { status: 401 });
+  const { uid } = signerAuth;
+  if (!ownAvatar(comment.avatarUrl, signerAuth.photo) || (comment.avatarUrl?.startsWith("data:") && !AVATAR_UPLOADS)) return NextResponse.json({ error: "Invalid avatar" }, { status: 400 });
   const db = adminDb();
   const petition = db.collection("petitions").doc(slug.data);
   const ref = petition.collection("comments").doc();

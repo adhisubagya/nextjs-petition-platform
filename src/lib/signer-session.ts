@@ -5,7 +5,7 @@ import { DEMO_MODE } from "@/lib/demo";
 
 // Signer UI state for this tab. In live mode the Firebase Auth session (custom token) is what the API trusts.
 // `signed` lists campaign slugs signed in this tab, so another campaign still shows its form.
-export type Signer = { email: string; signed: string[] };
+export type Signer = { email: string; signed: string[]; photo?: string | null }; // photo: Google profile photo
 
 const KEY = "signer";
 // email -> signed slugs, kept across sign-outs so signing in again as the same person shows "already signed".
@@ -47,7 +47,7 @@ function remember(email: string, signed: string[]) {
 }
 
 /** Restores what this person already signed in this tab, so a second signature is refused in the UI too. */
-export const signIn = (email: string) => write({ email, signed: history()[email] ?? [] });
+export const signIn = (email: string, photo: string | null = null) => write({ email, photo, signed: history()[email] ?? [] });
 
 export function markSigned(signer: Signer, slug: string) {
   const signed = [...signer.signed, slug];

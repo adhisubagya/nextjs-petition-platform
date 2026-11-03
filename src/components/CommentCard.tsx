@@ -7,7 +7,7 @@ import { SignerAvatar } from "./SignerAvatar";
 export function CommentCard({ comment }: { comment: Comment }) {
   return (
     <li className="flex gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-accent/40">
-      <SignerAvatar name={comment.name} avatarUrl={comment.avatarUrl} />
+      <SignerAvatar name={comment.name} avatarUrl={comment.avatarUrl} preset={comment.avatarPreset} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <span className="font-semibold">{comment.name}</span>
