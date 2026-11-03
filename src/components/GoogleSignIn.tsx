@@ -1,9 +1,10 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
-import { DEMO_GOOGLE_ACCOUNTS } from "@/lib/demo";
+import { DEMO_GOOGLE_ACCOUNTS, DEMO_MODE } from "@/lib/demo";
 import { SignerAvatar } from "./SignerAvatar";
 
 function GoogleMark() {
@@ -17,9 +18,52 @@ function GoogleMark() {
   );
 }
 
+/** Live mode: Google popup, then the server swaps the Google ID token for the signer token the email code gives. */
+async function liveGoogleSignIn(): Promise<string | null> {
+  const [{ GoogleAuthProvider, signInWithCustomToken, signInWithPopup }, { clientAuth }] = await Promise.all([
+    import("firebase/auth"),
+    import("@/lib/firebase/client"),
+  ]);
+  const auth = clientAuth();
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (e) {
+    if ((e as { code?: string }).code === "auth/popup-closed-by-user") return null;
+    throw new Error("Google sign-in failed. Try again or use your email.");
+  }
+  const res = await fetch("/api/auth/google", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken: await auth.currentUser!.getIdToken() }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    await auth.signOut();
+    throw new Error(data.error ?? "Something went wrong.");
+  }
+  await signInWithCustomToken(auth, data.token);
+  return data.email;
+}
+
 /** "Continue with Google". Demo Mode: a simulated account chooser; nothing is sent to Google or Firebase. */
 export function GoogleSignIn({ onSignedIn }: { onSignedIn: (email: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function live() {
+    track("sign_started", { method: "google" });
+    setBusy(true);
+    setError(null);
+    try {
+      const email = await liveGoogleSignIn();
+      if (email) pick(email);
+    } catch (e) {
+      setError(e instanceof TypeError ? "Network error. Please try again." : (e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const pick = (email: string) => {
     track("code_verified", { method: "google" });
@@ -33,15 +77,17 @@ export function GoogleSignIn({ onSignedIn }: { onSignedIn: (email: string) => vo
         variant="outline"
         size="lg"
         className="w-full"
-        aria-expanded={open}
-        aria-controls="google-chooser"
+        disabled={busy}
+        {...(DEMO_MODE && { "aria-expanded": open, "aria-controls": "google-chooser" })}
         onClick={() => {
+          if (!DEMO_MODE) return void live();
           if (!open) track("sign_started", { method: "google" });
           setOpen(!open);
         }}
       >
-        <GoogleMark /> Continue with Google
+        {busy ? <Loader2 className="animate-spin" aria-hidden /> : <GoogleMark />} Continue with Google
       </Button>
+      {error && <p role="alert" className="text-center text-sm text-destructive">{error}</p>}
       {open && (
         <div id="google-chooser" role="group" aria-labelledby="google-chooser-title" className="rounded-lg border bg-muted/30 p-3">
           <p id="google-chooser-title" className="text-sm font-medium">Choose an account</p>
