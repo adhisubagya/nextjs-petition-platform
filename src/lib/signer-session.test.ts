@@ -8,7 +8,7 @@ vi.stubGlobal("sessionStorage", {
 });
 vi.stubGlobal("window", { dispatchEvent: () => true });
 
-const { markSigned, readSigner, signIn } = await import("./signer-session");
+const { markSigned, readSigner, signIn, unmarkSigned } = await import("./signer-session");
 
 describe("signer session", () => {
   beforeEach(() => store.clear());
@@ -20,6 +20,15 @@ describe("signer session", () => {
     signIn("alex.rivera@example.com");
     expect(readSigner()!.signed).toEqual(["save-the-park"]);
     signIn("sam.okafor@example.com");
+    expect(readSigner()!.signed).toEqual([]);
+  });
+
+  it("lets the same person sign again after deleting their signature", () => {
+    signIn("alex.rivera@example.com");
+    markSigned(readSigner()!, "save-the-park");
+    unmarkSigned(readSigner()!, "save-the-park");
+    store.delete("signer");
+    signIn("alex.rivera@example.com");
     expect(readSigner()!.signed).toEqual([]);
   });
 });
