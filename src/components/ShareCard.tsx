@@ -4,14 +4,14 @@ import { DEMO_MODE } from "@/lib/demo";
 import { ShareButtons } from "./ShareButtons";
 
 /** Replaces the sign form once this visitor has signed: one signature, then share. */
-export function ShareCard({ title, url }: { title: string; url: string }) {
+export function ShareCard({ title, url, alreadySigned = false }: { title: string; url: string; alreadySigned?: boolean }) {
   return (
     <Card className="shadow-lg">
       <CardHeader className="items-center text-center">
         <PartyPopper className="mb-1 size-8" aria-hidden />
-        <CardTitle className="text-xl">Thanks for signing!</CardTitle>
+        <CardTitle className="text-xl">{alreadySigned ? "You have already signed this petition." : "Thanks for signing!"}</CardTitle>
         <CardDescription>
-          {DEMO_MODE ? "Demo Mode: nothing was saved. " : ""}Now help it reach the goal by sharing it.
+          {DEMO_MODE && !alreadySigned ? "Demo Mode: nothing was saved. " : ""}Now help it reach the goal by sharing it.
         </CardDescription>
       </CardHeader>
       <CardContent>
