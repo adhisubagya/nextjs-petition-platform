@@ -25,6 +25,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Comment moderation per campaign on each campaign's edit page: All / Pinned / Hidden filters, at most 3 pinned comments per campaign (checked in a transaction), and hide / show, where hidden comments stay stored but leave the public list. Pinning or hiding refreshes that campaign's page at once. The default-campaign comment table on the dashboard is removed.
 - Single-campaign mode (developer setting): `/` shows the featured campaign (else the newest live one), `/c/<slug>` redirects home, and the admin list and edit form are limited to that campaign.
 - Developer settings at /admin/developer (developer accounts only): switch each admin capability (create, edit, feature, delete, pin comments, goal, metrics, health) on or off for other admins, and choose single-campaign or multiple-campaign mode. Enforced on every admin API route; stored in the server-only `config/settings` doc. ADR 0005.
 - Developer role: accounts with the `developer` custom claim are admins without being in `ADMIN_EMAILS`. `npm run developer -- <email>` creates or resets one with a random password and signs out its old sessions.

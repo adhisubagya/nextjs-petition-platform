@@ -3,6 +3,7 @@ import type { DocumentData, DocumentSnapshot, Timestamp } from "firebase-admin/f
 import { seedCampaigns, seedComments, seedPetition } from "@/data/seed";
 import { campaignPhase, type Campaign, type CampaignSummary, type RichTextNode } from "@/lib/campaign";
 import { adminDb, isFirebaseAdminConfigured, petitionId } from "@/lib/firebase/admin";
+import type { CommentFilter } from "@/lib/comment-moderation";
 import type { Comment, Petition } from "@/lib/types";
 import { getSettings } from "@/lib/server/settings";
 
@@ -21,6 +22,7 @@ function toComment(doc: DocumentSnapshot): Comment {
     message: d.message,
     avatarUrl: d.avatarUrl ?? null,
     pinned: Boolean(d.pinned),
+    hidden: Boolean(d.hidden),
     createdAt: d.createdAt.toDate().toISOString(),
   };
 }
@@ -124,6 +126,13 @@ export async function getPetition(): Promise<Petition> {
 }
 
 export async function getComments(cursor: string | null = null, slug = petitionId()): Promise<CommentPage> {
+  const page = await commentPage(cursor, slug);
+  // shortcut: a hidden comment leaves its page one short; filter in the query if pages get sparse.
+  return { ...page, comments: page.comments.filter((c) => !c.hidden) };
+}
+
+// One page in public order (pinned first, newest first), hidden comments included.
+async function commentPage(cursor: string | null, slug: string): Promise<CommentPage> {
   if (!isFirebaseAdminConfigured) {
     // Only the default campaign has seed comments.
     if (slug !== petitionId()) return { comments: [], nextCursor: null };
@@ -142,4 +151,19 @@ export async function getComments(cursor: string | null = null, slug = petitionI
   const docs = (await query.get()).docs;
   const comments = docs.slice(0, PAGE_SIZE).map(toComment);
   return { comments, nextCursor: docs.length > PAGE_SIZE ? comments.at(-1)!.id : null };
+}
+
+const FLAG_LIMIT = 100;
+
+/** Admin moderation list: everything (paged), or the pinned / hidden comments of one campaign. */
+export async function getAdminComments(slug: string, filter: CommentFilter, cursor: string | null = null): Promise<CommentPage> {
+  if (filter === "all") return commentPage(cursor, slug);
+  if (!isFirebaseAdminConfigured) {
+    const comments = slug === petitionId() ? fallbackComments.filter((c) => Boolean(c[filter])) : [];
+    return { comments, nextCursor: null };
+  }
+  // shortcut: equality-only query (no composite index), newest first in memory, capped at FLAG_LIMIT.
+  const snap = await adminDb().collection("petitions").doc(slug).collection("comments").where(filter, "==", true).limit(FLAG_LIMIT).get();
+  const comments = snap.docs.map(toComment).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return { comments, nextCursor: null };
 }

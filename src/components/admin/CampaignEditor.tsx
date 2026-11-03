@@ -6,6 +6,7 @@ import type { Campaign } from "@/lib/campaign";
 import { useAdminSession } from "./AdminGate";
 import { AdminShell } from "./AdminShell";
 import { CampaignForm } from "./CampaignForm";
+import { CommentModeration } from "./CommentModeration";
 
 /** New campaign (slug null) or loads an existing one, drafts included, then shows the form. */
 export function CampaignEditor({ slug }: { slug: string | null }) {
@@ -22,7 +23,10 @@ export function CampaignEditor({ slug }: { slug: string | null }) {
       ) : isError ? (
         <p className="text-sm text-destructive">Could not load this campaign.</p>
       ) : data ? (
-        <CampaignForm campaign={data.campaign} />
+        <>
+          <CampaignForm campaign={data.campaign} />
+          <CommentModeration slug={data.campaign.slug} />
+        </>
       ) : (
         <p className="text-sm text-muted-foreground">Loading…</p>
       )}

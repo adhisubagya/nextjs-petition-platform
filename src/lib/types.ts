@@ -12,5 +12,6 @@ export type Comment = {
   message: string;
   avatarUrl: string | null;
   pinned: boolean;
+  hidden?: boolean; // set by moderation; hidden comments never reach the public list
   createdAt: string; // ISO 8601, serialisable across the server/client boundary
 };
