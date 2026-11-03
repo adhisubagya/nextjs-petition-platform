@@ -155,6 +155,7 @@ The app runs with an empty `.env.local`. Add services one at a time:
 | `NEXT_PUBLIC_POSTHOG_KEY`, `POSTHOG_PROJECT_ID`, `POSTHOG_PERSONAL_API_KEY` | Tracking and real dashboard stats |
 | `NEXT_PUBLIC_SITE_URL` | Absolute URLs for Open Graph and share links |
 | `OTP_HMAC_SECRET`, `SIGNER_ID_SECRET`, `EMAIL_FROM`, `BREVO_API_KEY` (+ optional `RESEND_API_KEY`, `MAILJET_API_KEY`/`MAILJET_SECRET_KEY`) | Live-mode email codes with provider fallback |
+| `NEXT_PUBLIC_GOOGLE_SIGNIN=true` | Live-mode "Continue with Google" for signers (unset: simulated in Demo Mode, off in live) |
 | `CSP_ENFORCE=true` | Enforce the full Content Security Policy instead of report-only |
 
 ### Firebase setup
@@ -164,6 +165,7 @@ The app runs with an empty `.env.local`. Add services one at a time:
 3. Deploy the rules and indexes: `firebase deploy --only firestore:rules,firestore:indexes,storage`.
 4. Create a service account key and copy its values into the `FIREBASE_*` server variables.
 5. `npm run seed`.
+6. Optional, Google sign-in for signers (ADR 0006): Authentication → Sign-in method → Add new provider → **Google** → Enable, pick a support email, Save. Then Authentication → Settings → **Authorized domains** → add the live domain (e.g. `your-app.vercel.app`; preview URLs need adding one by one, wildcards are not accepted). Set `NEXT_PUBLIC_GOOGLE_SIGNIN=true` and redeploy.
 
 ### Deploying
 
