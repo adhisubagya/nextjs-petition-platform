@@ -10,7 +10,7 @@ import type { Comment } from "@/lib/types";
 import { formatInZone, usePhase } from "@/lib/use-phase";
 import { CommentList } from "./CommentList";
 import { ProgressBar } from "./ProgressBar";
-import { ShareCard } from "./ShareCard";
+import { nextStepLine, ShareCard } from "./ShareCard";
 import { SignInCard } from "./SignInCard";
 import { SignForm } from "./SignForm";
 
@@ -38,7 +38,13 @@ export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, chil
         ) : !signer ? (
           <SignInCard onSignedIn={(email) => (setFresh(false), signIn(email))} />
         ) : signer.signed.includes(campaign.slug) ? (
-          <ShareCard title={campaign.title} url={shareUrl} alreadySigned={!fresh} />
+          <ShareCard
+            title={campaign.title}
+            url={shareUrl}
+            alreadySigned={!fresh}
+            reason={fresh ? added[0]?.message : undefined}
+            step={fresh ? nextStepLine(campaign.signatureCount + added.length, campaign.goal, campaign.milestones) : undefined}
+          />
         ) : (
           <SignForm
             campaign={campaign.slug}
