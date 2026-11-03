@@ -25,6 +25,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Each campaign page has its own share image (title and signature count) for WhatsApp, X and other link previews, instead of the default campaign's image. Drafts and unknown campaigns get a neutral image.
 - Comment moderation per campaign on each campaign's edit page: All / Pinned / Hidden filters, at most 3 pinned comments per campaign (checked in a transaction), and hide / show, where hidden comments stay stored but leave the public list. Pinning or hiding refreshes that campaign's page at once. The default-campaign comment table on the dashboard is removed.
 - Signers without a photo get a coloured initials avatar drawn locally (same colour for the same name), replacing the grey icon.
 - Single-campaign mode (developer setting): `/` shows the featured campaign (else the newest live one), `/c/<slug>` redirects home, and the admin list and edit form are limited to that campaign.

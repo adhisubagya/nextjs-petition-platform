@@ -12,7 +12,7 @@ import { getCampaign, getComments } from "@/lib/petition";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 // Drafts, deleted campaigns and malformed slugs are all a plain 404, without a Firestore read for junk.
-async function visibleCampaign(slug: string) {
+export async function visibleCampaign(slug: string) {
   if (!slugSchema.safeParse(slug).success) return null;
   const campaign = await getCampaign(slug);
   return campaign && campaignPhase(campaign) !== "draft" ? campaign : null;
