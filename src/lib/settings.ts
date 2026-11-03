@@ -28,6 +28,6 @@ const MULTIPLE_ONLY: Capability[] = ["create", "feature", "delete"];
 /** Why a capability is off, or null when allowed. Mode binds everyone; switches never bind a developer. */
 export function blocked(s: Settings, cap: Capability, developer: boolean): string | null {
   if (s.mode === "single" && MULTIPLE_ONLY.includes(cap)) return "Not available in single-campaign mode.";
-  if (!developer && s.disabled.includes(cap)) return "Turned off by the developer.";
+  if (!developer && s.disabled.includes(cap)) return "Turned off by the Master account.";
   return null;
 }

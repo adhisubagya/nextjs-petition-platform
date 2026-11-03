@@ -23,7 +23,7 @@ type Props = { email: string; title: string; children: React.ReactNode };
 export function AdminShell({ email, title, children }: Props) {
   const path = usePathname();
   const { developer } = useAdminSettings();
-  const nav = developer ? [...NAV, { href: "/admin/developer", label: "Developer", icon: SlidersHorizontal }] : NAV;
+  const nav = developer ? [...NAV, { href: "/admin/developer", label: "Master", icon: SlidersHorizontal }] : NAV;
   return (
     <div className="flex min-h-screen bg-muted/30">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-background px-4 py-6 lg:flex">
@@ -73,6 +73,7 @@ export function AdminShell({ email, title, children }: Props) {
             </nav>
           </div>
           <div className="flex items-center gap-1">
+            {developer && <Badge className="text-foreground">Master</Badge>}
             <span className="mr-2 hidden truncate text-sm text-muted-foreground md:inline">{email}</span>
             <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={signOut}>
