@@ -1,9 +1,11 @@
 "use client";
 
 import { CalendarClock, Lock } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Campaign } from "@/lib/campaign";
+import { DEMO_MODE } from "@/lib/demo";
+import { mySignature } from "@/lib/my-signature";
 import { useSigner } from "@/lib/signer-session";
 import type { CommentPage } from "@/lib/petition";
 import type { Comment } from "@/lib/types";
@@ -23,17 +25,30 @@ export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, chil
   const { signer, signIn, markSigned, unmarkSigned, signOut } = useSigner();
   // The signature made in this view; a restored one (earlier in the tab) shows the "already signed" notice instead.
   const [mine, setMine] = useState<Comment | null>(null);
+  const [signedNow, setSignedNow] = useState(false);
+  // Signatures deleted here that this view only knew from the server (not in `added`), so the count stays right.
+  const [removed, setRemoved] = useState(0);
   const signedHere = !!signer?.signed.includes(campaign.slug);
+  // Live mode after a reload: ask the server for this signer's signature so the menu can edit or delete it.
+  useEffect(() => {
+    if (DEMO_MODE || !signedHere || mine) return;
+    // Best effort: without it the menu just offers Sign out.
+    mySignature.get(campaign.slug).then(setMine, (e) => console.warn("could not load your signature", e));
+  }, [signedHere, mine, campaign.slug]);
   const menu = signer && (
     <SignerMenu
       email={signer.email}
       comment={signedHere ? mine : null}
-      onEdit={(c) => {
+      onEdit={async (c) => {
+        if (!DEMO_MODE) await mySignature.edit(campaign.slug, c);
         setAdded((prev) => prev.map((x) => (x.id === c.id ? c : x)));
         setMine(c);
       }}
-      onDelete={() => {
+      onDelete={async () => {
+        if (!DEMO_MODE) await mySignature.remove(campaign.slug);
+        if (!added.some((x) => x.id === mine?.id)) setRemoved((n) => n + 1);
         setAdded((prev) => prev.filter((x) => x.id !== mine?.id));
+        setSignedNow(false);
         setMine(null);
         unmarkSigned(campaign.slug);
       }}
@@ -48,7 +63,7 @@ export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, chil
     // Mobile order: progress, form, comments. Desktop: form pinned in the right column.
     <div className="mt-14 grid animate-fade-up gap-6 [animation-delay:150ms] lg:grid-cols-[1fr_380px]">
       <ProgressBar
-        count={campaign.signatureCount + added.length}
+        count={campaign.signatureCount + added.length - removed}
         goal={campaign.goal}
         milestones={campaign.milestones}
         dimmed={phase === "ended"}
@@ -57,9 +72,9 @@ export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, chil
         {phase !== "live" ? (
           <SigningClosed campaign={campaign} scheduled={phase === "scheduled"} />
         ) : !signer ? (
-          <SignInCard onSignedIn={(email) => (setMine(null), signIn(email))} />
+          <SignInCard onSignedIn={(email) => (setMine(null), setSignedNow(false), signIn(email))} />
         ) : signedHere ? (
-          <ShareCard title={campaign.title} url={shareUrl} alreadySigned={!mine} menu={menu} />
+          <ShareCard title={campaign.title} url={shareUrl} alreadySigned={!signedNow} menu={menu} />
         ) : (
           <SignForm
             campaign={campaign.slug}
@@ -68,6 +83,7 @@ export function PetitionBody({ campaign, initialPage, renderedAt, shareUrl, chil
             onSigned={(c) => {
               setAdded((prev) => [c, ...prev]);
               setMine(c);
+              setSignedNow(true);
               markSigned(campaign.slug);
             }}
           />
