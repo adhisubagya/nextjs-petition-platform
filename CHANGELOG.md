@@ -15,6 +15,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Changed
 
+- Single-campaign mode is now the default (alpha): with no saved settings, `/` is the featured campaign, and the admin metrics only show that campaign. The seeded featured campaign is past its goal (8,452 of 8,000) so the demo shows the Achieved badge and every milestone.
 - The developer role is shown as "Master" in the admin panel: a Master badge in the top bar, a Master item in the menu, and Master settings at /admin/developer.
 - Admin campaigns list: the "New campaign" button sits next to the list filters instead of in the top bar.
 - ADR 0004: many campaigns per deployment, derived campaign phases, and Radix, Tiptap and Recharts allowed in admin-only components; `components.json` for the shadcn CLI and chart colour tokens.

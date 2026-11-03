@@ -8,7 +8,7 @@ import { adminDb, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { parseRange, type DailyDoc } from "@/lib/metrics/range";
 import { sampleDocs } from "@/lib/metrics/sample";
 import { summarize } from "@/lib/metrics/summary";
-import { toCampaign } from "@/lib/petition";
+import { singleModeSlug, toCampaign } from "@/lib/petition";
 import { guard } from "@/lib/server/admin-auth";
 
 // shortcut: reads a campaign's whole daily/ history (≈1 read per active day), cached 10 min and shared by every range.
@@ -26,13 +26,14 @@ export async function GET(req: Request) {
   if (denied) return denied;
   const params = new URL(req.url).searchParams;
   const range = parseRange(params.get("range"));
-  const pick = params.get("campaign") ?? "all";
+  const single = await singleModeSlug(); // single-campaign mode: only that campaign, whatever was asked
+  const pick = single ?? params.get("campaign") ?? "all";
   if (pick !== "all" && !slugSchema.safeParse(pick).success) return NextResponse.json({ error: "Invalid campaign" }, { status: 400 });
 
   const live = isFirebaseAdminConfigured;
   const now = Date.now();
   const stored = live ? (await adminDb().collection("petitions").get()).docs.map((d) => toCampaign(d.id, d.data())) : seedCampaigns();
-  const campaigns = stored.filter((c) => campaignPhase(c, now) !== "draft");
+  const campaigns = stored.filter((c) => campaignPhase(c, now) !== "draft" && (!single || c.slug === single));
   const selected = pick === "all" ? null : (campaigns.find((c) => c.slug === pick) ?? null);
   if (pick !== "all" && !selected) return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
 

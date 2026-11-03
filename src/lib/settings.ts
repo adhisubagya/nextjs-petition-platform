@@ -20,7 +20,8 @@ export const settingsSchema = z
   .object({ mode: z.enum(["single", "multiple"]), disabled: z.array(z.enum(KEYS)).max(KEYS.length) })
   .strict();
 export type Settings = z.infer<typeof settingsSchema>;
-export const DEFAULT_SETTINGS: Settings = { mode: "multiple", disabled: [] };
+// Alpha ships as one campaign per deployment; the Master account can switch to multiple in /admin/developer.
+export const DEFAULT_SETTINGS: Settings = { mode: "single", disabled: [] };
 
 // Single mode has exactly one campaign: nothing to add, feature or remove.
 const MULTIPLE_ONLY: Capability[] = ["create", "feature", "delete"];

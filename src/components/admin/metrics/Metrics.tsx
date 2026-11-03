@@ -76,16 +76,21 @@ export function Metrics() {
     <section aria-labelledby="metrics-title" className={cn("space-y-4 md:space-y-6 transition-opacity", q.isPlaceholderData && "opacity-60")}>
       <div className="flex flex-wrap items-center gap-3">
         <h2 id="metrics-title" className="sr-only">Metrics</h2>
-        <label className="sr-only" htmlFor="metrics-campaign">Campaign</label>
-        <select
-          id="metrics-campaign"
-          className={cn(fieldClass, "h-9 w-auto max-w-64")}
-          value={campaign}
-          onChange={(e) => pick({ campaign: e.target.value })}
-        >
-          <option value="all">All campaigns</option>
-          {d?.campaigns.map((c) => <option key={c.slug} value={c.slug}>{c.title}</option>)}
-        </select>
+        {/* Single-campaign mode returns one campaign: nothing to pick. */}
+        {(!d || d.campaigns.length > 1) && (
+          <>
+            <label className="sr-only" htmlFor="metrics-campaign">Campaign</label>
+            <select
+              id="metrics-campaign"
+              className={cn(fieldClass, "h-9 w-auto max-w-64")}
+              value={campaign}
+              onChange={(e) => pick({ campaign: e.target.value })}
+            >
+              <option value="all">All campaigns</option>
+              {d?.campaigns.map((c) => <option key={c.slug} value={c.slug}>{c.title}</option>)}
+            </select>
+          </>
+        )}
         <div role="group" aria-label="Time range" className="flex overflow-x-auto rounded-md border p-0.5">
           {RANGES.map((r) => (
             <button
@@ -115,7 +120,7 @@ export function Metrics() {
           hint="Signatures ÷ visitors"
         />
         {d?.campaign ? (
-          <Tile label="Progress to goal" value={d.campaign.signatureCount} display={`${percent(d.campaign.signatureCount, d.campaign.goal)}%`} hint={`${fmt(d.campaign.signatureCount)} of ${fmt(d.campaign.goal)}`} />
+          <Tile label="Progress to goal" value={d.campaign.signatureCount} display={`${d.campaign.goal > 0 ? Math.round((d.campaign.signatureCount / d.campaign.goal) * 100) : 0}%`} hint={`${fmt(d.campaign.signatureCount)} of ${fmt(d.campaign.goal)}`} />
         ) : (
           <Tile label="Live campaigns" value={d?.comparison.filter((c) => c.phase === "live").length} hint={d && `${d.comparison.length} published`} />
         )}

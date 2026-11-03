@@ -18,9 +18,11 @@ describe("seed data", () => {
     const now = Date.UTC(2026, 10, 2);
     const campaigns = seedCampaigns(now);
     const states = campaigns.map((c) => `${campaignPhase(c, now)}${isAchieved(c) ? "+achieved" : ""}`);
-    expect(states).toEqual(["live", "live+achieved", "scheduled", "ended+achieved", "ended"]);
-    expect(campaigns.filter((c) => c.featured)).toHaveLength(1);
+    expect(states).toEqual(["live+achieved", "live+achieved", "scheduled", "ended+achieved", "ended"]);
+    // The featured one is the single-campaign demo, so it must show the Achieved badge.
+    expect(campaigns.filter((c) => c.featured).map((c) => c.slug)).toEqual(["default"]);
     for (const c of campaigns) {
+      expect(Date.parse(c.startAt) % 60_000).toBe(0);
       const input = {
         ...c,
         start: utcToWallClock(c.startAt, c.timeZone),

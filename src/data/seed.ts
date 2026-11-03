@@ -6,7 +6,7 @@ export const seedPetition: Omit<Petition, "id"> = {
   title: "Campaign Title",
   description:
     "A short summary of what this campaign asks for, who it affects and why it matters. Replace this text with your own petition copy.",
-  goal: 10000,
+  goal: 8000,
   signatureCount: 8452,
 };
 
@@ -72,16 +72,18 @@ const description: RichTextNode = {
 // [slug, title, subtitle, goal, count, start (days from now), end (days from now | null), featured, goal reached (days from now | null)]
 type Row = [string, string, string, number, number, number, number | null, boolean, number | null];
 const campaignRows: Row[] = [
-  ["default", "Campaign Title", "One sentence on the change this campaign asks for.", 10000, 8452, -21, 30, true, null],
+  // Featured, so it is the one campaign in single-campaign mode: past its goal to show the Achieved badge and every milestone.
+  ["default", "Campaign Title", "One sentence on the change this campaign asks for.", 8000, 8452, -21, 30, true, -2],
   ["achieved-campaign", "Achieved Campaign Title", "Past its goal and still collecting signatures.", 10000, 10842, -40, 14, false, -3],
   ["scheduled-campaign", "Scheduled Campaign Title", "Opens for signatures in a few days.", 5000, 0, 3, 40, false, null],
   ["ended-achieved-campaign", "Ended Campaign Title", "Closed after reaching its goal.", 5000, 5310, -90, -10, false, -25],
   ["closed-campaign", "Closed Campaign Title", "Closed before reaching its goal.", 3000, 1204, -120, -60, false, null],
 ];
 
-/** Five campaigns covering every public state: live (featured), live + achieved, scheduled, ended + achieved, ended. */
+/** Five campaigns covering every public state: live + achieved (featured), live + achieved, scheduled, ended + achieved, ended. */
 export function seedCampaigns(now = Date.now()): Campaign[] {
-  const iso = (days: number) => new Date(now + days * DAY).toISOString();
+  // Whole minutes, like the admin form, so saving an untouched seeded campaign doesn't count as moving its start.
+  const iso = (days: number) => new Date(Math.floor((now + days * DAY) / 60_000) * 60_000).toISOString();
   return campaignRows.map(([slug, title, subtitle, goal, signatureCount, start, end, featured, reached]) => ({
     slug,
     title,

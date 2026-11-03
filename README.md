@@ -125,9 +125,10 @@ Each kind of state lives in the tool built for it:
 
 `NEXT_PUBLIC_DEMO_MODE` defaults to **on**. Only the exact value `false` enables writes.
 
-- **Seeded data**: `npm run seed` writes one petition at 8,452 signatures and 18 comments. It refuses to run if comments already exist. Without Firebase credentials, the app serves the same seed data from memory, so a fresh clone works offline.
+- **Seeded data**: `npm run seed` writes five campaigns, one per public state, and 18 comments (skipped if comments already exist). The featured campaign has 8,452 signatures against a goal of 8,000, so it shows the Achieved badge and every milestone. Without Firebase credentials, the app serves the same seed data from memory, so a fresh clone works offline.
 - **Intercepted writes**: `POST /api/comments` runs the full pipeline (rate limit, validation, Turnstile) and returns a normal `201` but skips Firestore. The browser shows the comment from React state, and avatars are previewed locally and never uploaded.
 - **Email sign-in without email**: the code request runs validation, Turnstile and rate limits, then returns the code to the screen in a "Demo Mode" notice instead of emailing it. No account is created. In live mode the code is emailed (Brevo, falling back to Resend, then Mailjet) and verify returns a Firebase custom token; `POST /api/comments` then requires the signer's ID token and allows one signature per account. Demo Mode has no server-side sign-in check: the sign-in gate is in the browser only, since nothing is written (ADR 0003).
+- **Single-campaign mode** (the default for this alpha): `/` is the featured campaign, campaign links redirect home, and the admin list, edit form and metrics only cover that campaign. A deployment's owner can switch to multiple campaigns from a settings page only their account can see.
 - **View-only admin**: the login screen prints the demo credentials. In the dashboard, the Max signatures input, Save and Pin show "Action disabled in Demo Mode." The admin write endpoints also return `403` in Demo Mode, so the UI is not the only guard.
 - **Aggressive caching**: the petition page and OG image use `revalidate = 86400`, and `GET /api/comments` sends `s-maxage=86400`. Firestore is read about once a day, however many people visit.
 
