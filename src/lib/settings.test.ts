@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { blocked, DEFAULT_SETTINGS, settingsSchema } from "./settings";
 
 describe("blocked", () => {
-  it("allows everything by default", () => {
-    expect(blocked(DEFAULT_SETTINGS, "create", false)).toBeNull();
+  it("defaults to single-campaign mode with every switch on", () => {
+    expect(DEFAULT_SETTINGS).toEqual({ mode: "single", disabled: [] });
+    expect(blocked(DEFAULT_SETTINGS, "edit", false)).toBeNull();
+    expect(blocked(DEFAULT_SETTINGS, "create", true)).toMatch(/single-campaign/);
   });
   it("applies switches to admins but not developers", () => {
     const s = { mode: "multiple" as const, disabled: ["edit" as const] };

@@ -71,6 +71,8 @@ describe("metrics API in Demo Mode", async () => {
   vi.mock("@/lib/server/admin-auth", () => ({
     guard: async (req: Request) => (req.headers.get("x-admin") === "1" ? null : Response.json({ error: "Unauthorized" }, { status: 401 })),
   }));
+  const single = vi.hoisted(() => ({ slug: null as string | null }));
+  vi.mock("@/lib/petition", async (real) => ({ ...(await real<object>()), singleModeSlug: async () => single.slug }));
   const { GET } = await import("@/app/api/admin/metrics/route");
   const get = (qs: string, admin = true) => GET(new Request(`http://x/api/admin/metrics?${qs}`, { headers: admin ? { "x-admin": "1" } : {} }));
 
@@ -88,6 +90,20 @@ describe("metrics API in Demo Mode", async () => {
     expect(body.starts).toHaveLength(90);
     const all = await (await get("range=bogus&tz=Not/AZone")).json();
     expect(all).toMatchObject({ range: "7d", timeZone: "UTC" });
+  });
+
+  it("only ever shows the single campaign in single-campaign mode", async () => {
+    single.slug = "default";
+    try {
+      for (const qs of ["campaign=all", "campaign=achieved-campaign", ""]) {
+        const body = await (await get(qs)).json();
+        expect(body.campaigns.map((c: { slug: string }) => c.slug)).toEqual(["default"]);
+        expect(body.campaign.slug).toBe("default");
+        expect(body.comparison.map((c: { slug: string }) => c.slug)).not.toContain("achieved-campaign");
+      }
+    } finally {
+      single.slug = null;
+    }
   });
 });
 
