@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Share links carry `utm_source` (button), `utm_medium=share` and `utm_campaign` (slug); the dashboard shows "Visits from shares" by channel. The nightly rollup now runs 7 queries per chunk and at most 5 chunks per run.
 - "Continue with Google" for signers, above the email code. Demo Mode shows a simulated account chooser that writes nothing; signing in again as someone who already signed in this tab shows "You have already signed this petition." `NEXT_PUBLIC_GOOGLE_SIGNIN` switches it (default: on in Demo Mode, off in live).
 - Live mode (still off): Google sign-in swaps a server-verified Google ID token (audience, expiry, provider, verified email) for the same signer uid as the email code, so one signature per person holds across both (ADR 0006).
 - Live mode (still off): email codes can be sent from a Gmail account over SMTP (`GMAIL_USER`, `GMAIL_APP_PASSWORD`), tried after Brevo, Resend and Mailjet, for deploys without their own domain.
