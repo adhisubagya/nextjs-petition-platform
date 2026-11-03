@@ -25,6 +25,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- Each campaign page has its own share image (title and signature count) for WhatsApp, X and other link previews, instead of the default campaign's image. Drafts and unknown campaigns get a neutral image.
 - Signers without a photo get a coloured initials avatar drawn locally (same colour for the same name), replacing the grey icon.
 - Single-campaign mode (developer setting): `/` shows the featured campaign (else the newest live one), `/c/<slug>` redirects home, and the admin list and edit form are limited to that campaign.
 - Developer settings at /admin/developer (developer accounts only): switch each admin capability (create, edit, feature, delete, pin comments, goal, metrics, health) on or off for other admins, and choose single-campaign or multiple-campaign mode. Enforced on every admin API route; stored in the server-only `config/settings` doc. ADR 0005.
