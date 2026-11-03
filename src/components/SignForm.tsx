@@ -36,13 +36,10 @@ export function SignForm({ campaign, email, onSigned, menu }: Props) {
   async function onSubmit(values: FormValues) {
     setStatus(null);
     try {
-      // Loaded on demand so Firebase Storage and the compressor stay out of the first page load.
-      const { compressAvatar, uploadAvatar } = await import("@/lib/avatar");
-      const small = avatar ? await compressAvatar(avatar) : null;
+      // Loaded on demand so the compressor stays out of the first page load.
+      const avatarUrl = avatar ? await (await import("@/lib/avatar")).tinyAvatar(avatar) : null;
       // Live mode: the API checks this Firebase ID token and allows one signature per account.
       const idToken = DEMO_MODE ? null : await liveIdToken();
-      // Demo Mode keeps Storage at zero writes too; the preview uses a local object URL.
-      const avatarUrl = small && !DEMO_MODE ? await uploadAvatar(small) : null;
       const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(idToken && { Authorization: `Bearer ${idToken}` }) },
@@ -52,7 +49,7 @@ export function SignForm({ campaign, email, onSigned, menu }: Props) {
       if (!res.ok) return setStatus(body.error ?? "Something went wrong.");
       track("signed");
       // The parent swaps this form for the share card, so there is nothing to reset.
-      onSigned({ ...body.comment, avatarUrl: body.comment.avatarUrl ?? (small && URL.createObjectURL(small)) });
+      onSigned(body.comment);
     } catch {
       setStatus("Network error. Please try again.");
     }

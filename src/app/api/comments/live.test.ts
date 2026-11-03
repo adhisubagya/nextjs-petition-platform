@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 
 // Live mode: DEMO_MODE is read at import time, so set the env before importing the route.
 vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "false");
-vi.stubEnv("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET", "bucket");
 
 // Minimal Firestore fake: docs keyed by path, transactions applied immediately. Updates are recorded, not applied.
 const docs = new Map<string, Record<string, unknown>>();
@@ -73,11 +72,13 @@ describe("POST /api/comments in live mode", () => {
     expect((await post({}, "uid-2")).status).toBe(201);
   });
 
-  it("only accepts avatars from the signer's own folder in our bucket", async () => {
-    const own = "https://firebasestorage.googleapis.com/v0/b/bucket/o/avatars%2Fuid-3%2Fa.webp?alt=media";
-    expect((await post({ avatarUrl: own.replace("uid-3", "uid-9") }, "uid-3")).status).toBe(400);
+  it("accepts only a tiny inline avatar and stores it on the comment", async () => {
+    const tiny = `data:image/webp;base64,${Buffer.from("RIFF\0\0\0\0WEBPVP8 ").toString("base64")}`;
+    expect((await post({ avatarUrl: "https://firebasestorage.googleapis.com/v0/b/bucket/o/avatars%2Fuid-3%2Fa.webp" }, "uid-3")).status).toBe(400);
     expect((await post({ avatarUrl: "https://evil.example/a.png" }, "uid-3")).status).toBe(400);
-    expect((await post({ avatarUrl: own }, "uid-3")).status).toBe(201);
+    const res = await post({ avatarUrl: tiny }, "uid-3");
+    expect(res.status).toBe(201);
+    expect((await res.json()).comment.avatarUrl).toBe(tiny);
   });
 
   it("refuses outside the Live window, for drafts, deleted and unknown campaigns", async () => {

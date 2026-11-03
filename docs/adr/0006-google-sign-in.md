@@ -16,7 +16,7 @@ A deploy on `*.vercel.app` has no domain for SPF/DKIM, so email codes are hard t
    - requires `firebase.sign_in_provider === "google.com"`, `email_verified === true` and an email,
    - returns `customTokenFor(email)`: the same `e_<HMAC(SIGNER_ID_SECRET, email)>` uid and `signer` claim as the email code,
    - deletes the throwaway Google user Firebase created (best effort), so Firebase Auth keeps no signer profiles.
-   The browser then calls `signInWithCustomToken`. Everything after that (signing API, `signers/{uid}` transaction, storage rules, Turnstile, rate limits) is unchanged.
+   The browser then calls `signInWithCustomToken`. Everything after that (signing API, `signers/{uid}` transaction, Turnstile, rate limits) is unchanged.
 4. Rate limit: the verify limiter (10 per IP per 10 min). The route answers 404 in Demo Mode or when the flag is off.
 
 ## Consequences

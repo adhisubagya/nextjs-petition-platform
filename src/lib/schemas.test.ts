@@ -16,8 +16,9 @@ describe("commentRequestSchema", () => {
   it("requires a Turnstile token", () => {
     expect(commentRequestSchema.safeParse({ ...valid, turnstileToken: "" }).success).toBe(false);
   });
-  it("rejects a non-URL avatar", () => {
+  it("rejects anything but a tiny inline avatar", () => {
     expect(commentRequestSchema.safeParse({ ...valid, avatarUrl: "javascript:alert(1)" }).success).toBe(false);
+    expect(commentRequestSchema.safeParse({ ...valid, avatarUrl: "https://evil.example/a.png" }).success).toBe(false);
   });
   it("signs as Anonymous by default and drops the typed name", () => {
     const rest = { ...valid, anonymous: undefined };

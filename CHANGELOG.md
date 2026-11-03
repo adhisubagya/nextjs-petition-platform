@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Changed
+
+- Avatars are a 64 px WebP stored inline on the signature (checked server-side: real WebP/PNG/JPEG bytes, 8 KB max) instead of Firebase Storage uploads, so live mode needs no Storage bucket or Blaze plan; `storage.rules` is gone.
+
 ### Added
 
 - Groundwork for Master-only service settings (ADR 0007): `MASTER_EMAIL` pins the Master account (developer claim and that email; unset means nobody), service keys saved in the panel are encrypted with AES-256-GCM using `SETTINGS_ENCRYPTION_KEY` and refused when it is missing, panel values override env, and every change is audited without its value. No panel yet.
