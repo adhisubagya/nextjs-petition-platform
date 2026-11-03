@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Live mode with Google enabled: both flags are read at import time.
+// Live mode with Google enabled (Demo Mode is read at import time; the Google flag per request).
 vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "false");
 vi.stubEnv("NEXT_PUBLIC_GOOGLE_SIGNIN", "true");
 vi.stubEnv("SIGNER_ID_SECRET", "test-secret");
@@ -10,7 +10,7 @@ const verifyIdToken = vi.fn();
 const deleteUser = vi.fn(async () => {});
 const createCustomToken = vi.fn(async (uid: string) => `custom:${uid}`);
 vi.mock("firebase-admin/auth", () => ({ getAuth: () => ({ verifyIdToken, createCustomToken, deleteUser }) }));
-vi.mock("@/lib/firebase/admin", () => ({ adminDb: () => ({}) }));
+vi.mock("@/lib/firebase/admin", () => ({ adminDb: () => ({}), isFirebaseAdminConfigured: false }));
 
 const { POST } = await import("./route");
 const { uidFor } = await import("@/lib/server/signer-auth");

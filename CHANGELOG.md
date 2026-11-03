@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Changed
 
+- The Turnstile site key, PostHog project key and Google sign-in switch come from the server per render (Master panel value, else env) instead of being fixed at build time; saving one refreshes cached pages.
 - Turnstile verification, the PostHog query (metrics rollup), email sending and the email quota on the health card now use values saved in the Master Integrations panel, falling back to Vercel env.
 - Avatars are a 64 px WebP stored inline on the signature (checked server-side: real WebP/PNG/JPEG bytes, 8 KB max) instead of Firebase Storage uploads, so live mode needs no Storage bucket or Blaze plan; `storage.rules` is gone.
 

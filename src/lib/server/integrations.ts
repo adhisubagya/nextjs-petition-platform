@@ -1,6 +1,6 @@
 import "server-only";
 import { FieldValue } from "firebase-admin/firestore";
-import { revalidateTag, unstable_cache } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { z } from "zod";
 import { adminDb, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { seal, sealedSchema, settingsKey, unseal } from "./secret-box";
@@ -84,6 +84,8 @@ export async function saveIntegration(field: IntegrationKey, value: string | nul
   batch.create(doc.collection("audit").doc(), { at: FieldValue.serverTimestamp(), by, field, action: value === null ? "clear" : "set" });
   await batch.commit();
   revalidateTag("integrations");
+  // Public values are baked into pages cached for 24 h (ADR 0001).
+  if (!secret) revalidatePath("/", "layout");
 }
 
 export type IntegrationSource = "panel" | "env" | "unset";

@@ -7,9 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
 import { track } from "@/lib/analytics";
-import { GOOGLE_SIGNIN } from "@/lib/google-signin";
 import { codeSchema, emailSchema } from "@/lib/schemas";
-import { siteKey } from "@/lib/turnstile";
+import { usePublicConfig } from "@/app/providers";
 import { GoogleSignIn } from "./GoogleSignIn";
 
 async function post(path: string, body: unknown) {
@@ -21,6 +20,7 @@ async function post(path: string, body: unknown) {
 
 /** Email → 6-digit code. In Demo Mode the server returns the code instead of emailing it. */
 export function SignInCard({ onSignedIn }: { onSignedIn: (email: string, photo?: string | null) => void }) {
+  const { turnstileSiteKey, googleSignin } = usePublicConfig();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"email" | "code">("email");
@@ -82,7 +82,7 @@ export function SignInCard({ onSignedIn }: { onSignedIn: (email: string, photo?:
       <CardContent>
         {step === "email" ? (
           <>
-            {GOOGLE_SIGNIN && (
+            {googleSignin && (
               <>
                 <GoogleSignIn onSignedIn={onSignedIn} />
                 <p className="my-4 flex items-center gap-3 text-xs text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
@@ -96,7 +96,7 @@ export function SignInCard({ onSignedIn }: { onSignedIn: (email: string, photo?:
                 <Input id="signin-email" type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} onFocus={() => !started && (setStarted(true), track("sign_started"))} />
                 <p className="text-xs text-muted-foreground">Used only to sign you in and stop duplicate signatures.</p>
               </div>
-              <Turnstile siteKey={siteKey} onSuccess={setToken} onExpire={() => setToken(null)} options={{ size: "flexible" }} />
+              <Turnstile siteKey={turnstileSiteKey} onSuccess={setToken} onExpire={() => setToken(null)} options={{ size: "flexible" }} />
               <Button type="submit" size="lg" className="w-full" disabled={busy || !token}>
                 {busy ? <Loader2 className="animate-spin" aria-hidden /> : <Mail aria-hidden />} Send code
               </Button>

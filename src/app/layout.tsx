@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { publicConfig } from "@/lib/public-config";
+import { serverEnv } from "@/lib/server/integrations";
 import { Providers } from "./providers";
 
 const sans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
@@ -12,12 +14,12 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { colorScheme: "dark light", themeColor: "#0a0a0a" };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     // next-themes sets the class before paint; the attribute differs from the server HTML by design.
     <html lang="en" className={`dark ${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="min-h-screen font-sans antialiased">
-        <Providers>{children}</Providers>
+        <Providers config={publicConfig(await serverEnv())}>{children}</Providers>
         <footer className="mx-auto max-w-2xl border-t px-4 py-6 text-center text-sm text-muted-foreground">
           © 2026 DAWN. All rights reserved.
         </footer>
