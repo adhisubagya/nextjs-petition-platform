@@ -10,6 +10,7 @@ import { adminApi } from "@/lib/admin-api";
 import { CAPABILITIES, MODES, type Capability, type Settings } from "@/lib/settings";
 import { useAdminSession, useAdminSettings } from "./AdminGate";
 import { AdminShell } from "./AdminShell";
+import { IntegrationSettings } from "./IntegrationSettings";
 
 const choice = "flex items-center gap-3 rounded-lg border px-3 py-2 text-sm has-[:checked]:border-foreground";
 
@@ -79,6 +80,7 @@ export function DeveloperSettings() {
               {saving ? "Saving…" : "Save"}
             </Button>
           </div>
+          <IntegrationSettings />
       </div>
     </AdminShell>
   );
