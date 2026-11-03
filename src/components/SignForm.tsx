@@ -14,7 +14,7 @@ import { DEMO_MODE } from "@/lib/demo";
 import { liveIdToken } from "@/lib/my-signature";
 import { commentFieldsSchema, MESSAGE_MAX, NAME_MAX, hasName, nameIssue } from "@/lib/schemas";
 import { AVATAR_UPLOADS } from "@/lib/tiny-avatar";
-import { siteKey } from "@/lib/turnstile";
+import { usePublicConfig } from "@/app/providers";
 import type { Comment } from "@/lib/types";
 
 const formSchema = commentFieldsSchema.omit({ avatarUrl: true, avatarPreset: true }).extend({ anonymous: z.boolean(), website: z.string() }).refine(hasName, nameIssue);
@@ -24,6 +24,7 @@ type FormValues = z.infer<typeof formSchema>;
 type Props = { campaign: string; email: string; photo: string | null; onSigned: (comment: Comment) => void; menu: ReactNode };
 
 export function SignForm({ campaign, email, photo, onSigned, menu }: Props) {
+  const { turnstileSiteKey } = usePublicConfig();
   const [token, setToken] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -109,7 +110,7 @@ export function SignForm({ campaign, email, photo, onSigned, menu }: Props) {
               {photo && !avatar && <p className="text-xs text-muted-foreground">Your Google photo is used unless you choose an image.</p>}
             </div>
           )}
-          <Turnstile siteKey={siteKey} onSuccess={setToken} onExpire={() => setToken(null)} options={{ size: "flexible" }} />
+          <Turnstile siteKey={turnstileSiteKey} onSuccess={setToken} onExpire={() => setToken(null)} options={{ size: "flexible" }} />
           <HoldToSign onComplete={handleSubmit(onSubmit)} disabled={!token} busy={isSubmitting} />
           {status && <p role="status" className="text-center text-sm text-muted-foreground">{status}</p>}
         </form>

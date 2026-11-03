@@ -21,4 +21,4 @@ The owner wants service parameters (Turnstile, PostHog, email providers, Google 
 - Pages cached for 24 h bake in public values, so saving one must revalidate those pages (wired with the public values).
 - `/api/admin/integrations` (GET status, PUT one field) is a 404 for anyone but Master, refuses writes in Demo Mode and when the sign-in is older than 10 minutes, and never returns secret values.
 - Server code reads service keys through `serverEnv()` (process.env with panel overrides): Turnstile, PostHog query, email, health. Without Firebase it is plain process.env.
-- Follow-up: public values (Turnstile site key, PostHog key, Google on/off).
+- Public values (Turnstile site key, PostHog key, Google on/off) are resolved in the root layout by `publicConfig(await serverEnv())` and passed to the client through `Providers` (`usePublicConfig()`); saving one revalidates every page. PostHog hosts stay build-time because they are in the CSP.

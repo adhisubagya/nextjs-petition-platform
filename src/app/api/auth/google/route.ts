@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { DEMO_MODE } from "@/lib/demo";
-import { GOOGLE_SIGNIN } from "@/lib/google-signin";
+import { publicConfig } from "@/lib/public-config";
+import { serverEnv } from "@/lib/server/integrations";
 import { allowVerify } from "@/lib/server/ratelimit";
 import { customTokenFor, deleteAuthUser, verifyGoogleToken } from "@/lib/server/signer-auth";
 
@@ -10,7 +11,7 @@ const bodySchema = z.object({ idToken: z.string().min(1).max(4096) });
 /** Live mode: Google ID token in, the same signer custom token the email code gives out (ADR 0006). */
 export async function POST(req: NextRequest) {
   // Demo Mode simulates Google in the browser and never calls this.
-  if (DEMO_MODE || !GOOGLE_SIGNIN) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (DEMO_MODE || !publicConfig(await serverEnv()).googleSignin) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
   if (!(await allowVerify(ip))) return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
