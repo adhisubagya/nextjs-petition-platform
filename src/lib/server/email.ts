@@ -1,5 +1,6 @@
 import "server-only";
 import nodemailer from "nodemailer";
+import { serverEnv } from "@/lib/server/integrations";
 import { defaultStore, type Store } from "@/lib/server/kv";
 
 export type Mail = { to: string; subject: string; text: string; html: string };
@@ -118,7 +119,8 @@ type Deps = { store?: Store; fetch?: typeof fetch; env?: Env; now?: Date };
  * 429 marks that provider spent for the day; 5xx, auth and network errors move on at once.
  */
 export async function sendEmail(mail: Mail, deps: Deps = {}): Promise<string> {
-  const { store = defaultStore, fetch: doFetch = fetch, env = process.env, now = new Date() } = deps;
+  const { store = defaultStore, fetch: doFetch = fetch, now = new Date() } = deps;
+  const env = deps.env ?? (await serverEnv());
   for (const p of PROVIDERS) {
     if (!p.configured(env)) continue;
     // HTTP providers send from EMAIL_FROM; Gmail sends from its own account.

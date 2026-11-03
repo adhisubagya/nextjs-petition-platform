@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isTestSecret, verifyTurnstile } from "./turnstile";
 
+// Panel overrides are covered in integrations.test.ts; here the merged env is just process.env.
+vi.mock("./integrations", () => ({ serverEnv: async () => process.env }));
+
 afterEach(() => vi.unstubAllEnvs());
 
 describe("verifyTurnstile", () => {

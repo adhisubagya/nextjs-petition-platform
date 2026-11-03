@@ -34,7 +34,7 @@ const ref = () => adminDb().collection("config").doc("integrations");
 
 // Caches the stored doc (ciphertext only); decryption happens per call so plain secrets never enter the data cache.
 const readDoc = unstable_cache(
-  async (): Promise<Record<string, unknown>> => (isFirebaseAdminConfigured ? ((await ref().get()).data() ?? {}) : {}),
+  async (): Promise<Record<string, unknown>> => (await ref().get()).data() ?? {},
   ["integrations"],
   { tags: ["integrations"] },
 );
@@ -56,7 +56,12 @@ export function mergeIntegrations(doc: Record<string, unknown>, env: Record<stri
   return out;
 }
 
-export const getIntegrationEnv = async (): Promise<IntegrationEnv> => mergeIntegrations(await readDoc(), process.env);
+// Without Firebase there is nothing to read, so skip the cache entirely (it also only works inside Next).
+export const getIntegrationEnv = async (): Promise<IntegrationEnv> =>
+  mergeIntegrations(isFirebaseAdminConfigured ? await readDoc() : {}, process.env);
+
+/** process.env with the panel overrides applied: what server code reads service keys from. */
+export const serverEnv = async (): Promise<Record<string, string | undefined>> => ({ ...process.env, ...(await getIntegrationEnv()) });
 
 /**
  * Sets (value) or clears (null) one override and appends an audit entry without the value, in one batch.
@@ -85,7 +90,7 @@ export type IntegrationSource = "panel" | "env" | "unset";
 
 /** Where each value comes from (never the secret itself), whether secrets can be saved, and the last 20 changes. */
 export async function integrationStatus() {
-  const panel = mergeIntegrations(await readDoc(), { SETTINGS_ENCRYPTION_KEY: process.env.SETTINGS_ENCRYPTION_KEY });
+  const panel = mergeIntegrations(isFirebaseAdminConfigured ? await readDoc() : {}, { SETTINGS_ENCRYPTION_KEY: process.env.SETTINGS_ENCRYPTION_KEY });
   const fields = KEYS.map((key) => {
     const source: IntegrationSource = panel[key] ? "panel" : process.env[key] ? "env" : "unset";
     const value = INTEGRATIONS[key].secret ? undefined : (panel[key] ?? process.env[key]);
