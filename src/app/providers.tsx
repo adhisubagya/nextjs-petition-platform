@@ -20,7 +20,8 @@ export function Providers({ children, config }: { children: React.ReactNode; con
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 5 * 60_000 } } }));
   useEffect(() => {
     const key = config.posthogKey;
-    if (key) posthog.init(key, { api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com" });
+    // Memory persistence: no analytics cookies, so no consent banner (see /privacy).
+    if (key) posthog.init(key, { api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com", persistence: "memory" });
   }, [config.posthogKey]);
   return (
     // Dark by default regardless of OS setting; the toggle's choice is kept in localStorage.
