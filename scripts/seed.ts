@@ -2,6 +2,10 @@
 import { cert, initializeApp } from "firebase-admin/app";
 import { Timestamp, getFirestore } from "firebase-admin/firestore";
 import { seedCampaigns, seedComments } from "../src/data/seed";
+import { DEMO_MODE } from "../src/lib/demo";
+
+// Sample signatures and comments must never reach a live database.
+if (!DEMO_MODE) throw new Error("Refusing to seed: NEXT_PUBLIC_DEMO_MODE=false (live). Seed only the demo project.");
 
 const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, PETITION_ID = "default" } = process.env;
 if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
