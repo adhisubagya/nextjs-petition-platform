@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { ImagePlus } from "lucide-react";
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -111,6 +112,14 @@ export function SignForm({ campaign, email, photo, onSigned, menu }: Props) {
             </div>
           )}
           <Turnstile siteKey={turnstileSiteKey} onSuccess={setToken} onExpire={() => setToken(null)} options={{ size: "flexible" }} />
+          <p className="text-xs text-muted-foreground">
+            By signing you confirm you are 13 or older and agree that your comment, photo and name (unless you sign anonymously) are
+            shown publicly, delivered to the petition&apos;s recipients and processed by our service providers. See our{" "}
+            <Link href="/privacy" className="underline">
+              privacy notice
+            </Link>
+            .
+          </p>
           <HoldToSign onComplete={handleSubmit(onSubmit)} disabled={!token} busy={isSubmitting} />
           {status && <p role="status" className="text-center text-sm text-muted-foreground">{status}</p>}
         </form>

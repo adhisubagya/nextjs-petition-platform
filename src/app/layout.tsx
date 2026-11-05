@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 import { publicConfig } from "@/lib/public-config";
 import { serverEnv } from "@/lib/server/integrations";
@@ -21,7 +22,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="min-h-screen font-sans antialiased">
         <Providers config={publicConfig(await serverEnv())}>{children}</Providers>
         <footer className="mx-auto max-w-2xl border-t px-4 py-6 text-center text-sm text-muted-foreground">
-          © 2026 DAWN. All rights reserved.
+          © 2026 DAWN. All rights reserved. ·{" "}
+          <Link href="/privacy" className="underline">
+            Privacy
+          </Link>
         </footer>
       </body>
     </html>
