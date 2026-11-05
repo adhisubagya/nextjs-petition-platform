@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
+import { serverEnv } from "@/lib/server/integrations";
 
 export const revalidate = 3600;
 export const metadata: Metadata = { title: "Privacy notice", description: "What we collect when you sign, why, and your choices." };
 
 const EFFECTIVE = "November 5, 2026";
-// The controller is the campaign owner, not the developer. Contact comes from PRIVACY_CONTACT_EMAIL (Vercel env).
-const CONTROLLER = "DAWN";
 
 const storage = [
   ["Signer session (sessionStorage)", "Keeps you signed in while the tab is open", "Until the tab closes", "Necessary"],
@@ -15,7 +14,10 @@ const storage = [
 ];
 
 export default async function PrivacyPage() {
-  const contact = process.env.PRIVACY_CONTACT_EMAIL;
+  const env = await serverEnv();
+  // The campaign owner, not the developer. Contact falls back to the dedicated Gmail that sends sign-in codes.
+  const controller = env.PRIVACY_CONTROLLER_NAME || "DAWN";
+  const contact = env.PRIVACY_CONTACT_EMAIL || env.GMAIL_USER;
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 pt-16 pb-12 text-sm leading-relaxed [&_h2]:text-lg [&_h2]:font-semibold [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5">
       <header className="space-y-1">
@@ -26,8 +28,7 @@ export default async function PrivacyPage() {
       <section className="space-y-2">
         <h2>Who we are</h2>
         <p>
-          {CONTROLLER} runs this petition and decides how your data is used (the data controller). Contact details are at the end of
-          this notice.
+          {controller} runs this petition and decides how your data is used. How to reach us is at the end of this notice.
         </p>
       </section>
 
@@ -51,16 +52,15 @@ export default async function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2>Why we use it, and on what basis</h2>
+        <h2>How we use it</h2>
         <ul>
           <li>
             To record, count and show your signature, and to deliver the petition&apos;s comments and public names to the people or
-            organisation it is addressed to. Basis: your consent, given when you sign.
+            organisation it is addressed to.
           </li>
-          <li>To send your sign-in code. We send no marketing email. Basis: your request.</li>
+          <li>To send your sign-in code. We send no marketing email.</li>
           <li>
-            To keep the site secure, stop fake signatures and understand how the site is used. Basis: our legitimate interest in a
-            reliable, honest petition.
+            To keep the site secure, stop fake signatures and understand how the site is used.
           </li>
         </ul>
         <p>Signing a petition can show your views. We use your signature only for this petition. We do not sell your personal data or share it for advertising.</p>
@@ -71,8 +71,7 @@ export default async function PrivacyPage() {
         <p>
           These service providers process data for us under their terms: Google Firebase (database and sign-in), Vercel (hosting), Upstash
           (rate limits), Cloudflare Turnstile (bot checks), PostHog (statistics), and Brevo, Resend, Mailjet or Google Gmail (sending
-          sign-in codes). Some are based in, or store data in, the United States, the European Union or other countries outside your own.
-          By signing you agree to this transfer; we rely on each provider&apos;s data protection terms to safeguard it.
+          sign-in codes). Some may store data outside your state or country. Apart from them and the petition&apos;s recipients, we share your data with no one.
         </p>
       </section>
 
@@ -94,9 +93,16 @@ export default async function PrivacyPage() {
             Ask us for a copy of your data, or to correct, delete or stop using it. You can withdraw your consent at any time; this does not
             affect what we did before.
           </li>
-          <li>Complain to your data protection authority if you think we have misused your data.</li>
           <li>We will not treat you differently for using these rights.</li>
         </ul>
+      </section>
+
+      <section className="space-y-2">
+        <h2>How we respond to Do Not Track</h2>
+        <p>
+          We treat every visitor the same whether or not the browser sends a Do Not Track signal, because we do not track you across
+          other sites and we allow no third party to do so through this site.
+        </p>
       </section>
 
       <section className="space-y-2">

@@ -114,7 +114,7 @@ export function SignForm({ campaign, email, photo, onSigned, menu }: Props) {
           <Turnstile siteKey={turnstileSiteKey} onSuccess={setToken} onExpire={() => setToken(null)} options={{ size: "flexible" }} />
           <p className="text-xs text-muted-foreground">
             By signing you confirm you are 13 or older and agree that your comment, photo and name (unless you sign anonymously) are
-            shown publicly, delivered to the petition&apos;s recipients and processed by our service providers abroad. See our{" "}
+            shown publicly, delivered to the petition&apos;s recipients and processed by our service providers. See our{" "}
             <Link href="/privacy" className="underline">
               privacy notice
             </Link>
