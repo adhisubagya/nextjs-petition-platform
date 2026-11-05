@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { serverEnv } from "@/lib/server/integrations";
 
 export const revalidate = 3600;
 export const metadata: Metadata = { title: "Privacy notice", description: "What we collect when you sign, why, and your choices." };
 
-const EFFECTIVE = "November 4, 2026";
+const EFFECTIVE = "November 5, 2026";
+// The controller is the campaign owner, not the developer. Contact comes from PRIVACY_CONTACT_EMAIL (Vercel env).
+const CONTROLLER = "DAWN";
 
 const storage = [
   ["Signer session (sessionStorage)", "Keeps you signed in while the tab is open", "Until the tab closes", "Necessary"],
@@ -14,7 +15,7 @@ const storage = [
 ];
 
 export default async function PrivacyPage() {
-  const contact = (await serverEnv()).GMAIL_USER;
+  const contact = process.env.PRIVACY_CONTACT_EMAIL;
   return (
     <main className="mx-auto max-w-2xl space-y-6 px-4 pt-16 pb-12 text-sm leading-relaxed [&_h2]:text-lg [&_h2]:font-semibold [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5">
       <header className="space-y-1">
@@ -23,43 +24,77 @@ export default async function PrivacyPage() {
       </header>
 
       <section className="space-y-2">
+        <h2>Who we are</h2>
+        <p>
+          {CONTROLLER} runs this petition and decides how your data is used (the data controller). Contact details are at the end of
+          this notice.
+        </p>
+      </section>
+
+      <section className="space-y-2">
         <h2>What we collect</h2>
         <ul>
-          <li>Your name, email address and optional comment and photo when you sign.</li>
-          <li>Your IP address, briefly, to stop spam and abuse (rate limits).</li>
-          <li>Anonymous page-view statistics, kept in memory only: no analytics cookies.</li>
+          <li>
+            When you sign: your comment, your name (unless you sign anonymously, which is the default; the name is then not stored), and
+            a photo if you add one or sign in with Google.
+          </li>
+          <li>
+            Your email address, to send your sign-in code or to read it from your Google account. We store only a coded fingerprint of it,
+            so you can sign once and edit later; your email itself is not kept in our database.
+          </li>
+          <li>Your IP address, to stop spam, abuse and fake signatures (rate limits and bot checks).</li>
+          <li>
+            Usage statistics: pages viewed, clicks, referring site, device and browser type and approximate location derived from your IP
+            address. No analytics cookies are set; each visit is counted separately.
+          </li>
         </ul>
       </section>
 
       <section className="space-y-2">
-        <h2>How we use it</h2>
+        <h2>Why we use it, and on what basis</h2>
         <ul>
-          <li>To count and show your signature. Your name, comment and photo are public unless you choose to sign anonymously; your email is never shown.</li>
-          <li>To deliver the petition, including signer names and comments, to the people or organisation it is addressed to.</li>
-          <li>To send your sign-in code. We send no marketing email.</li>
-          <li>To keep the site secure and stop fake signatures.</li>
+          <li>
+            To record, count and show your signature, and to deliver the petition&apos;s comments and public names to the people or
+            organisation it is addressed to. Basis: your consent, given when you sign.
+          </li>
+          <li>To send your sign-in code. We send no marketing email. Basis: your request.</li>
+          <li>
+            To keep the site secure, stop fake signatures and understand how the site is used. Basis: our legitimate interest in a
+            reliable, honest petition.
+          </li>
         </ul>
-        <p>We do not sell your personal information or share it for targeted advertising.</p>
+        <p>Signing a petition can show your views. We use your signature only for this petition. We do not sell your personal data or share it for advertising.</p>
       </section>
 
       <section className="space-y-2">
-        <h2>Who processes it</h2>
+        <h2>Who processes it, and where</h2>
         <p>
-          Google Firebase (database and sign-in), Google Gmail (sign-in codes), Vercel (hosting), Upstash (rate limits), Cloudflare
-          Turnstile (bot checks) and PostHog (statistics). They act on our instructions and may store data outside your country.
+          These service providers process data for us under their terms: Google Firebase (database and sign-in), Vercel (hosting), Upstash
+          (rate limits), Cloudflare Turnstile (bot checks), PostHog (statistics), and Brevo, Resend, Mailjet or Google Gmail (sending
+          sign-in codes). Some are based in, or store data in, the United States, the European Union or other countries outside your own.
+          By signing you agree to this transfer; we rely on each provider&apos;s data protection terms to safeguard it.
         </p>
       </section>
 
       <section className="space-y-2">
         <h2>How long we keep it</h2>
-        <p>For as long as the petition is open and up to 12 months after it closes, unless you ask us to delete it sooner.</p>
+        <ul>
+          <li>Your signature, comment, name and photo: while the petition is open and up to 12 months after it closes, then deleted.</li>
+          <li>Sign-in codes: 10 minutes. Rate-limit records tied to your IP address or email: up to 48 hours.</li>
+          <li>Usage statistics: as long as PostHog keeps them under our account settings.</li>
+        </ul>
+        <p>You can delete your signature sooner yourself, or ask us to.</p>
       </section>
 
       <section className="space-y-2">
-        <h2>Your choices</h2>
+        <h2>Your rights</h2>
         <ul>
           <li>Edit or delete your signature at any time from the account menu after signing in.</li>
-          <li>Ask us what we hold about you, or to correct or delete it, by emailing the contact below.</li>
+          <li>
+            Ask us for a copy of your data, or to correct, delete or stop using it. You can withdraw your consent at any time; this does not
+            affect what we did before.
+          </li>
+          <li>Complain to your data protection authority if you think we have misused your data.</li>
           <li>We will not treat you differently for using these rights.</li>
         </ul>
       </section>
@@ -98,7 +133,7 @@ export default async function PrivacyPage() {
 
       <section className="space-y-2">
         <h2>Changes and contact</h2>
-        <p>If we change this notice, we update the date above. If a breach affects your data, we will tell you as the law requires.</p>
+        <p>If we change this notice, we update the date above and tell you here before the change applies. If a breach affects your data, we will tell you as the law requires.</p>
         <p>
           Questions or requests:{" "}
           {contact ? (
