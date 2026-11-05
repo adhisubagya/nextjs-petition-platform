@@ -4,6 +4,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2] - 2026-11-05
+
 ### Changed
 
 - `npm run seed` refuses to run when `NEXT_PUBLIC_DEMO_MODE=false`, so sample signatures and comments never land in a live database.
