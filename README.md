@@ -1,10 +1,25 @@
-# Petition Platform
+<div align="center">
 
-A generic, production-shaped petition engine built with **Next.js**, **Firebase** and **Vercel**. Visitors can sign with a comment and an optional avatar, share the campaign, and page through other signers. A hidden admin dashboard shows traffic analytics and controls the goal and pinned comments.
+# Petition Platform (Demo)
 
-The public deployment runs in **Demo Mode**: everything works in the browser, but nothing is written to the database. It is read-heavy, edge-cached and costs close to nothing to keep online.
+**A petition engine you can click through without breaking anything.** Sign, comment, open the admin panel: it all works, and nothing is saved.
 
-> Demo admin login: `admin@demo.com` / `demo2026` at `/admin` (view-only)
+[![Live demo](https://img.shields.io/badge/demo-nextjs--petition--platform.vercel.app-000?logo=vercel)](https://nextjs-petition-platform.vercel.app/)
+![Mode: Demo](https://img.shields.io/badge/mode-demo-blueviolet)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+[**Open the demo →**](https://nextjs-petition-platform.vercel.app/) · [See the live product](https://github.com/touchgrass0711/petition-platform) · [Run it locally](#getting-started)
+
+</div>
+
+> [!NOTE]
+> This repo is the portfolio demo. Active development and the production OUTSET.ID site ([petition-platform-lime.vercel.app](https://petition-platform-lime.vercel.app)) live in **[touchgrass0711/petition-platform](https://github.com/touchgrass0711/petition-platform)**.
+
+A generic, production-shaped petition engine built with **Next.js**, **Firebase** and **Vercel**. Visitors sign in, leave a comment and an optional avatar, share the campaign, and page through other signers. An admin dashboard shows traffic analytics and manages campaigns and pinned comments.
+
+The [public demo](https://nextjs-petition-platform.vercel.app/) runs in **Demo Mode**: everything works in the browser, but nothing is written to the database. It is read-heavy, edge-cached and costs close to nothing to keep online.
+
+> Demo admin login: `admin@demo.com` / `demo2026` at [`/admin`](https://nextjs-petition-platform.vercel.app/admin) (view-only)
 
 ---
 
@@ -154,7 +169,7 @@ The app runs with an empty `.env.local`. Add services one at a time:
 | `NEXT_PUBLIC_SITE_URL` | Absolute URLs for Open Graph and share links |
 | `OTP_HMAC_SECRET`, `SIGNER_ID_SECRET`, `EMAIL_FROM`, `BREVO_API_KEY` (+ optional `RESEND_API_KEY`, `MAILJET_API_KEY`/`MAILJET_SECRET_KEY`, `GMAIL_USER`/`GMAIL_APP_PASSWORD`) | Live-mode email codes with provider fallback |
 | `NEXT_PUBLIC_GOOGLE_SIGNIN=true` | Live-mode "Continue with Google" for signers (unset: simulated in Demo Mode, off in live) |
-| `PRIVACY_CONTROLLER_NAME`, `PRIVACY_CONTACT_EMAIL` | Who runs the petition and its contact email on `/privacy` (defaults: DAWN, `GMAIL_USER`) |
+| `PRIVACY_CONTROLLER_NAME`, `PRIVACY_CONTACT_EMAIL` | Who runs the petition and its contact email on `/privacy` (defaults: DAWN, `GMAIL_USER`; the live repo uses OUTSET.ID) |
 | `CSP_ENFORCE=true` | Enforce the full Content Security Policy instead of report-only |
 
 ### Firebase setup
